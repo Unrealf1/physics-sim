@@ -5,6 +5,7 @@
 #include <spdlog/spdlog.h>
 
 #include "window.hpp"
+#include "physics.hpp"
 
 
 int main(int argc, char** argv) {
