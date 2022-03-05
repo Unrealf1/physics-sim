@@ -1,8 +1,10 @@
 #pragma once
 
 #include <memory>
+#include <pstl/glue_execution_defs.h>
 #include <vector>
 #include <algorithm>
+#include <atomic>
 
 #include <spdlog/spdlog.h>
 
@@ -19,7 +21,7 @@ namespace Physics {
 
         using objects_t = std::vector<SimulationObject>;
 
-        const objects_t& get_objects() const {
+        objects_t get_objects() const {
             return get_last_buffer();    
         }
 
@@ -32,23 +34,18 @@ namespace Physics {
         }
 
         void step(float dt) {
-            auto& last_buffer = get_last_buffer();
+            const auto& last_buffer = get_last_buffer();
             auto& active_buffer = get_active_buffer();
             active_buffer.clear();
+            active_buffer.resize(last_buffer.size());
             
-            spdlog::info(
-                    "simulation has {} elemetns. First coordinates are: {} - {}",
-                    last_buffer.size(),
-                    last_buffer[0].m_phys_item.position.x,                    
-                    last_buffer[0].m_phys_item.position.y                    
-            );
-
             auto collisions = collision_detector_t::detect_collisions(last_buffer);
 
             std::transform(
+                    std::execution::par_unseq,
                     std::begin(last_buffer), std::end(last_buffer),
                     std::begin(collisions),
-                    std::back_inserter(active_buffer),
+                    std::begin(active_buffer),
                     [dt, this](const SimulationObject& obj, const collision_t& collision) -> SimulationObject {
                         auto copy = obj;
                         copy.m_phys_item = m_integrator.update(dt, obj.m_phys_item);
@@ -68,19 +65,31 @@ namespace Physics {
                         };
                         
                         // process collisions
-                        for (SimulationObject& collided_obj : collision) {
-                            if (!rays_collide(
-                                    copy.m_phys_item.position, copy.m_phys_item.position + copy.m_phys_item.speed,
-                                    collided_obj.m_phys_item.position, collided_obj.m_phys_item.position + collided_obj.m_phys_item.speed)) 
+                        for (const SimulationObject& collided_obj : collision) {
+                            std::pair<glm::vec2, glm::vec2> my_ray = {
+                                copy.m_phys_item.position, 
+                                copy.m_phys_item.position + copy.m_phys_item.speed, 
+                            };
+                            std::pair<glm::vec2, glm::vec2> other_ray = {
+                                collided_obj.m_phys_item.position, 
+                                collided_obj.m_phys_item.position + copy.m_phys_item.speed, 
+                            };
+
+                            if (false && !rays_collide(
+                                    my_ray.first, my_ray.second,
+                                    other_ray.first, other_ray.second
+                                )
+                                && !copy.m_collider.is_colliding(other_ray.first, other_ray.second)
+                                && !collided_obj.m_collider.is_colliding(my_ray.first, my_ray.second)) 
                             {
-                                spdlog::info("collision between {} and {} is not important", copy.m_phys_item.id, collided_obj.m_phys_item.id);
+                                //spdlog::info("collision between {} and {} is not important", copy.m_phys_item.id, collided_obj.m_phys_item.id);
                                 continue;
                             }
-                            spdlog::info("collision betweeb {} and {} is important! Rays:\n{},{} -> {},{}\n{},{} -> {},{}",
+                            /*spdlog::info("collision between {} and {} is important! Rays:\n{},{} -> {},{}\n{},{} -> {},{}",
                                 copy.m_phys_item.id, collided_obj.m_phys_item.id,
                                 copy.m_phys_item.position.x, copy.m_phys_item.position.y, copy.m_phys_item.speed.x, copy.m_phys_item.speed.y,
                                 collided_obj.m_phys_item.position.x, collided_obj.m_phys_item.position.y, collided_obj.m_phys_item.speed.x, collided_obj.m_phys_item.speed.y
-                            );
+                            );*/
 
                             glm::vec2 velocity = copy.m_phys_item.speed - collided_obj.m_phys_item.speed;
                             float dm = copy.m_phys_item.mass - collided_obj.m_phys_item.mass;
@@ -90,7 +99,7 @@ namespace Physics {
                             glm::vec2 new_velocity1 = k1 * velocity;
                             glm::vec2 new_velocity2 = k2 * velocity;
                             copy.m_phys_item.speed = new_velocity1 + collided_obj.m_phys_item.speed;
-                            collided_obj.m_phys_item.speed = new_velocity2 + collided_obj.m_phys_item.speed;
+                            //collided_obj.m_phys_item.speed = new_velocity2 + collided_obj.m_phys_item.speed;
                         }
 
                         if ((copy.m_collider.is_colliding_x(m_simulation_rectangle.x) & (copy.m_phys_item.speed.x > 0.0f))
@@ -115,9 +124,10 @@ namespace Physics {
         }
 
     private:
+        std::mutex m_objects_lock;
         objects_t m_objects_arrays[2];
         integrator_t m_integrator;
-        uint8_t m_active_index = 0; 
+        std::atomic<uint8_t> m_active_index = 0; 
         glm::vec2 m_simulation_rectangle;
 
         objects_t& get_active_buffer() {

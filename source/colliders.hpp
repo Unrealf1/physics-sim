@@ -19,10 +19,11 @@ namespace Physics {
     template<typename T>
     concept Collider = 
     Movable<T> &&
-    requires (T collider, float border) {
+    requires (T collider, float border, glm::vec2 point) {
         { collider.is_colliding_x(border) } -> std::same_as<bool>;
         { collider.is_colliding_y(border) } -> std::same_as<bool>;
         { collider.is_colliding(collider) } -> std::same_as<bool>;
+        { collider.is_colliding(point, point) } -> std::same_as<bool>;
     };
 
     struct BasicMovable {
@@ -56,6 +57,16 @@ namespace Physics {
             return std::abs(m_position.y - border) <= m_radius;
         }
         bool is_colliding(const CircleCollider& other) const { return glm::distance(other.m_position, m_position) <= other.m_radius + m_radius; }
+        bool is_colliding(glm::vec2 ray_start, glm::vec2 ray_point) const {
+            float a = ray_point.x * ray_point.x + ray_point.y * ray_point.y;
+            float b = 2.0f * (ray_start.x * ray_point.x - ray_point.x * m_position.x + ray_start.y * ray_point.y - ray_point.y * m_position.y);
+            float c = ray_start.x * ray_start.x + m_position.x * m_position.x 
+                + ray_start.y * ray_start.y + m_position.y * m_position.y
+                - m_radius * m_radius
+                - 2.0f * (ray_start.x * m_position.x + ray_start.y * m_position.y);
+
+            return (b * b) >= 4.0f * a * c;
+        }
 
     public:
         float m_radius;

@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <SDL.h>
+#include <ios>
 #include "simulation.hpp"
 #include "window.hpp"
 
@@ -40,9 +41,6 @@ public:
         auto old_r = radius;
         position *= to_screen_k();
         radius *= to_screen_k();
-        spdlog::warn("circle: {},{} ({}) -> {},{} ({})",
-                old.x, old.y, old_r,
-                position.x, position.y, radius);
         for (float w = -radius; w < radius; w++) {
             for (float h = -radius; h < radius; h++) {
                 if ((w*w + h*h) <= (radius * radius)) {
@@ -59,6 +57,16 @@ public:
         SDL_RenderCopy(m_renderer, m_texture, nullptr, nullptr);
         SDL_RenderPresent(m_renderer);
         SDL_RenderClear(m_renderer);
+    }
+
+    static glm::ivec4 some_color(uint64_t idx) {
+        auto s = sinf(idx);
+        auto c = cosf(idx);
+        auto cs = sinf(idx * idx) + cosf(idx * idx);
+        auto r = (s + 1.0f) / 2.0f * 255.0f;
+        auto g = (c + 1.0f) / 2.0f * 255.0f;
+        auto b = (cs + 1.5f) / 3.0f * 255.0f;
+        return glm::vec4(r, g, b, 255);
     }
 
 private:
