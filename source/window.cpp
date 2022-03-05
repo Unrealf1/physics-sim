@@ -2,6 +2,7 @@
 
 #include <SDL.h>
 #include <spdlog/spdlog.h>
+
 #include <cstdlib>
 
 
@@ -74,12 +75,12 @@ namespace engine {
         SDL_SetRenderDrawColor(m_renderer.get(), red, green, blue, alpha);
     }
 
-    /*std::pair<int, int> getWindowDimentions(const window_t& window) {
+    glm::ivec2 Window::getDimentions() const {
         int width;
         int height;
         
-        SDL_GetWindowSize(window.get(), &width, &height);
+        SDL_GetWindowSize(m_window.get(), &width, &height);
 
         return { width, height };
-    }*/
+    }
 }

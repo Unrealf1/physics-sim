@@ -1,6 +1,7 @@
 #pragma once
 
 #include "glm/geometric.hpp"
+#include <climits>
 #include <cwchar>
 #include <glm/glm.hpp>
 #include <tuple>
@@ -18,8 +19,9 @@ namespace Physics {
     template<typename T>
     concept Collider = 
     Movable<T> &&
-    requires (T collider, glm::vec2 point) {
-        { collider.is_colliding(point) } -> std::same_as<bool>;
+    requires (T collider, float border) {
+        { collider.is_colliding_x(border) } -> std::same_as<bool>;
+        { collider.is_colliding_y(border) } -> std::same_as<bool>;
         { collider.is_colliding(collider) } -> std::same_as<bool>;
     };
 
@@ -40,13 +42,19 @@ namespace Physics {
     };
     
     struct EmptyCollider : public BasicMovable {
-        bool is_colliding(const glm::vec2&) const { return false; }
+        bool is_colliding_x(float) const { return false; }
+        bool is_colliding_y(float) const { return false; }
         bool is_colliding(const EmptyCollider&) const { return false; }
     };
 
     struct CircleCollider : public BasicMovable {
     public:
-        bool is_colliding(const glm::vec2& point) const { return glm::distance(point, m_position) <= m_radius; }
+        bool is_colliding_x(float border) const {
+            return std::abs(m_position.x - border) <= m_radius;
+        }
+        bool is_colliding_y(float border) const {
+            return std::abs(m_position.y - border) <= m_radius;
+        }
         bool is_colliding(const CircleCollider& other) const { return glm::distance(other.m_position, m_position) <= other.m_radius + m_radius; }
 
     public:

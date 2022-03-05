@@ -3,6 +3,7 @@
 #include <chrono>
 
 #include <spdlog/spdlog.h>
+#include <SDL.h>
 
 #include "colliders.hpp"
 #include "collision_detectors.hpp"
@@ -23,29 +24,54 @@ int main(int argc, char** argv) {
     p.h = 1080;
 
     engine::Window w(p);
-    Visualizer v(w);
     
     w.SetClearColor(1, 0, 0, 0);
 
-    Physics::Simulation<Physics::ForwardEuler, Physics::SimpleCollisionDetector> sim;
+    Physics::Simulation<Physics::ForwardEuler, Physics::SimpleCollisionDetector> sim({1000, 1000});
+    Visualizer v(w);
+    v.set_simulation_rectangle(sim.get_simulation_rectangle());
  
 
-    Physics::CircleCollider collider = {{}, 3.0f};
-    Physics::PhysicsItem item = {1.0f, {10.0f, 10.0f}, {}};
+    Physics::CircleCollider collider = {{{100.0f, 100.0f}}, 90.0f};
+    Physics::PhysicsItem item = {1.0f, collider.m_position, {50.0f, 0.0f}};
     sim.add_circle({ 
             collider,
             item
     });
-    sim.add_force(Physics::earth_gravitation());
 
-    for (int i = 0; i < 100; ++i) {
-        sim.step(0.1f);
-        for (const auto& item : sim.get_objects()) {
-            v.draw_circle(item.m_phys_item.position, item.m_collider.m_radius * 4, {255, 0, 0, 255});
+    sim.add_circle({
+        {{{260.0f, 100.0f}}, 30.0f},
+        {1.0f, {260.0f, 100.0f}, {-50.0f, 0.0f}}
+    });
+
+    sim.add_force(Physics::earth_gravitation());
+    bool quit = false;
+    SDL_Event event;
+    auto last_frame = std::chrono::steady_clock::now() - 10ms;
+    auto frame_duration = 1ms;
+    while(!quit){
+        while(SDL_PollEvent(&event)){
+            switch(event.type){
+                case SDL_QUIT:
+                    quit = true;
+                    break;
+            }
         }
+        auto now = std::chrono::steady_clock::now();
+        auto expected_end_time = now + frame_duration;
+        auto since_last_frame = now - last_frame;
+        last_frame = now;
+        auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(since_last_frame).count() / 1000.0f;
+        sim.step(dt);
+        for (const auto& item : sim.get_objects()) {
+            v.draw_circle(item.m_phys_item.position, item.m_collider.m_radius, {255, 0, 0, 255});
+        }
+        v.draw_rectangle({0.0f, 0.0f}, sim.get_simulation_rectangle(), {128, 128, 0, 255});
 
         v.finish_frame();
-        std::this_thread::sleep_for(100ms);
+        std::this_thread::sleep_until(expected_end_time);
+        
+
     }
 
     /*SDL_Event event;    // Event variable

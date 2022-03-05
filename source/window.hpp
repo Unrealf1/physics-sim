@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glm/glm.hpp>
+
 #include <memory>
 #include <cstdint>
 
@@ -25,6 +27,7 @@ namespace engine {
         Window(const WindowParams&);
         
         void SetClearColor(uint8_t red, uint8_t green, uint8_t blue, uint8_t alpha = 255);
+        glm::ivec2 getDimentions() const;
         
         sdl_window_t m_window;
         sdl_renderer_t m_renderer;
