@@ -36,10 +36,11 @@ namespace Physics {
             //TODO: test for speed (use of execution policies)
             //TODO: rewrite with ranges
             //TODO: respect filtering
+            assert(("Mass is sane", item.mass > 0));
             std::vector<glm::vec2> force_vectors;
             force_vectors.reserve(m_forces.size());
             std::transform(
-                //std::execution::par_unseq, //TODO: why?
+                //std::execution::par_unseq, //TODO: why ce?
                 m_forces.begin(), m_forces.end(),
                 std::back_inserter(force_vectors),
                 [&item](Force& f) -> glm::vec2 { return f.calculate(item); }

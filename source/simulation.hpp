@@ -102,7 +102,15 @@ namespace Physics {
             return m_objects_arrays[m_active_index];
         }
 
+        const objects_t& get_active_buffer() const {
+            return m_objects_arrays[m_active_index];
+        }
+
         objects_t& get_last_buffer() {
+            return m_objects_arrays[1 - m_active_index];
+        }
+
+        const objects_t& get_last_buffer() const {
             return m_objects_arrays[1 - m_active_index];
         }
 
