@@ -11,17 +11,20 @@
 
 namespace Physics {
     using collision_t = std::vector<std::reference_wrapper<const SimulationObject>>;
-
+    struct Link {
+        size_t first_idx;
+        size_t second_idx;
+    };
+    using links_t = std::vector<Link>;
 
     template<typename T>
-    concept CollisionDetector = requires(std::vector<SimulationObject>& objects) {
-        { T::detect_collisions(objects) } -> std::same_as<std::vector<collision_t>>;
+    concept CollisionDetector = requires(std::vector<SimulationObject>& objects, links_t links) {
+        { T::detect_collisions(objects, links) } -> std::same_as<std::vector<collision_t>>;
     };
 
     struct SimpleCollisionDetector {
-        static std::vector<collision_t> detect_collisions(const std::vector<SimulationObject>& objects) {
+        static std::vector<collision_t> detect_collisions(const std::vector<SimulationObject>& objects, const links_t& links) {
             std::vector<collision_t> result(objects.size());
-            //return result;
             //TODO: for each inner vector reserve some constant memory
 
             for (size_t i = 0; i < objects.size(); ++i) {
@@ -32,12 +35,16 @@ namespace Physics {
                     } 
                 }
             }
+            for (const auto& link : links) {
+                result[link.first_idx].emplace_back(objects[link.second_idx]);
+                result[link.second_idx].emplace_back(objects[link.first_idx]);
+            }
 
             return result;
         } 
     };
     struct EmptyCollisionDetector {
-        static std::vector<collision_t> detect_collisions(const std::vector<SimulationObject>& objects) {
+        static std::vector<collision_t> detect_collisions(const std::vector<SimulationObject>& objects, const links_t&) {
             std::vector<collision_t> result(objects.size());
             return result;
         } 
