@@ -5,6 +5,7 @@
 #include <cwchar>
 #include <glm/glm.hpp>
 #include <tuple>
+#include <cmath>
 
 
 namespace Physics {
@@ -46,6 +47,7 @@ namespace Physics {
         bool is_colliding_x(float) const { return false; }
         bool is_colliding_y(float) const { return false; }
         bool is_colliding(const EmptyCollider&) const { return false; }
+        bool is_colliding(glm::vec2, glm::vec2) const { return false; };
     };
 
     struct CircleCollider : public BasicMovable {
@@ -58,14 +60,16 @@ namespace Physics {
         }
         bool is_colliding(const CircleCollider& other) const { return glm::distance(other.m_position, m_position) <= other.m_radius + m_radius; }
         bool is_colliding(glm::vec2 ray_start, glm::vec2 ray_point) const {
-            float a = ray_point.x * ray_point.x + ray_point.y * ray_point.y;
-            float b = 2.0f * (ray_start.x * ray_point.x - ray_point.x * m_position.x + ray_start.y * ray_point.y - ray_point.y * m_position.y);
-            float c = ray_start.x * ray_start.x + m_position.x * m_position.x 
-                + ray_start.y * ray_start.y + m_position.y * m_position.y
+            auto d = ray_point - ray_start;
+            auto& p0 = ray_start;
+            float a = d.x * d.x + d.y * d.y;
+            float b = 2.0f * (p0.x * d.x - d.x * m_position.x + p0.y * d.y - d.y * m_position.y);
+            float c = p0.x * p0.x + m_position.x * m_position.x 
+                + p0.y * p0.y + m_position.y * m_position.y
                 - m_radius * m_radius
-                - 2.0f * (ray_start.x * m_position.x + ray_start.y * m_position.y);
-
-            return (b * b) >= 4.0f * a * c;
+                - 2.0f * (p0.x * m_position.x + p0.y * m_position.y);
+            float D = std::sqrt((b * b) - 4.0f * a * c);
+            return (D > b) | (D > -b);
         }
 
     public:

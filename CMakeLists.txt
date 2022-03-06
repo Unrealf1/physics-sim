@@ -30,7 +30,9 @@ enable_sanitizers(project_options)
 
 file(GLOB_RECURSE SOURCES . source/*.cpp)
 add_executable(main ${SOURCES})
+add_executable(test test.cpp)
 
 target_link_libraries(main project_options project_warnings)
 target_link_libraries(main SDL2 spdlog glm)
+target_link_libraries(test SDL2 spdlog glm)
 

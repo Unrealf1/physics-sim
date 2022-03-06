@@ -7,7 +7,22 @@
 #include "window.hpp"
 
 
+using color_t = glm::vec< 4, uint8_t, glm::defaultp >;
+
 class Visualizer {
+    struct ColorRestorer {
+        ColorRestorer(SDL_Renderer* renderer) : m_renderer(renderer) {
+            SDL_GetRenderDrawColor(m_renderer, &r, &g, &b, &a);
+        }
+
+        ~ColorRestorer() {
+            SDL_SetRenderDrawColor(m_renderer, r, g, b, a);
+        }
+
+        SDL_Renderer* m_renderer;
+        uint8_t r, g, b, a;
+    };
+
 public:
     Visualizer(engine::Window& window) : m_window(window) {
         auto surface = SDL_GetWindowSurface(window.m_window.get());
@@ -20,25 +35,27 @@ public:
         m_simulation_rectangle = simulation_rectangle;
     }
 
-    void draw_rectangle(glm::vec2 position, glm::vec2 dimentions, glm::ivec4 color) {
+    void draw_rectangle(glm::vec2 position, glm::vec2 dimentions, color_t color) {
+        ColorRestorer cr(m_renderer);
         position *= to_screen_k();
         dimentions *= to_screen_k();
-        uint8_t r, g, b, a;
-        SDL_GetRenderDrawColor(m_renderer, &r, &g, &b, &a);
         SDL_SetRenderDrawColor(m_renderer, color.r, color.g, color.b, color.a);
         SDL_FRect rect { position.x, position.y, dimentions.x, dimentions.y };
         SDL_RenderDrawRectF(m_renderer, &rect);   
-        SDL_SetRenderDrawColor(m_renderer, r, g, b, a);
-
     }
 
-    void draw_circle(glm::vec2 position, float radius, glm::ivec4 color) {
-        uint8_t r, g, b, a;
-        SDL_GetRenderDrawColor(m_renderer, &r, &g, &b, &a);
+    void draw_line(glm::vec2 from, glm::vec2 to, color_t color) {
+        ColorRestorer cr(m_renderer);
+        from *= to_screen_k();
+        to *= to_screen_k();
+        SDL_SetRenderDrawColor(m_renderer, color.r, color.g, color.b, color.a);
+        SDL_RenderDrawLineF(m_renderer, from.x, from.y, to.x, to.y);
+    }
+
+    void draw_circle(glm::vec2 position, float radius, color_t color) {
+        ColorRestorer cr(m_renderer);
         SDL_SetRenderDrawColor(m_renderer, color.r, color.g, color.b, color.a);
 
-        auto old = position;
-        auto old_r = radius;
         position *= to_screen_k();
         radius *= to_screen_k();
         for (float w = -radius; w < radius; w++) {
@@ -48,9 +65,6 @@ public:
                 }
             }
         }
-
-
-        SDL_SetRenderDrawColor(m_renderer, r, g, b, a);
     }
 
     void finish_frame() {
@@ -60,9 +74,10 @@ public:
     }
 
     static glm::ivec4 some_color(uint64_t idx) {
-        auto s = sinf(idx);
-        auto c = cosf(idx);
-        auto cs = sinf(idx * idx) + cosf(idx * idx);
+        auto fidx = float(idx);
+        auto s = sinf(fidx);
+        auto c = cosf(fidx);
+        auto cs = sinf(fidx * fidx) + cosf(fidx * fidx);
         auto r = (s + 1.0f) / 2.0f * 255.0f;
         auto g = (c + 1.0f) / 2.0f * 255.0f;
         auto b = (cs + 1.5f) / 3.0f * 255.0f;
@@ -78,8 +93,7 @@ private:
 
     float to_screen_k() {
         auto window_dims = m_window.getDimentions();
-        float sim_win_height = window_dims.y;
-        return (window_dims.y / m_simulation_rectangle.y);
+        return (float(window_dims.y) / m_simulation_rectangle.y);
 
     }
 

@@ -31,7 +31,7 @@ void physics_f(std::stop_token stoken, Sim* simulation) {
         auto expected_end_time = now + frame_duration;
         auto since_last_frame = now - last_frame;
         last_frame = now;
-        auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(since_last_frame).count() / 1000.0f;
+        auto dt = float(std::chrono::duration_cast<std::chrono::milliseconds>(since_last_frame).count()) / 1000.0f;
         sim.step(0.01f);
         //sim.step(dt);   
         fps = fps * 0.9f + 1.0f/dt;
@@ -40,26 +40,27 @@ void physics_f(std::stop_token stoken, Sim* simulation) {
     }
 }
 
-int main(int argc, char** argv) {
-    static_assert(std::is_invocable_v<void (*)(int&), int& >);
-
-    spdlog::info("Hello, world!");
-
+int main() {
     engine::WindowParams p {};
-    p.w = 1920;
-    p.h = 1080;
+    p.w = 1820;
+    p.h = 880;
 
     engine::Window w(p);
     
-    w.SetClearColor(1, 0, 0, 0);
+    Physics::Simulation<Physics::ForwardEuler, Physics::EmptyCollisionDetector> sim({1820, 880});
+//#define SMALL
+#ifdef SMALL
+    Physics::CircleCollider collider = {{{100.0f + 10, 10.0f+10}}, 15.0f};
+    Physics::PhysicsItem item = {1.0f, collider.m_position, {80.0f, 0.0f}};
+    sim.add_circle({collider, item});
 
-    Physics::Simulation<Physics::ForwardEuler, Physics::SimpleCollisionDetector> sim({1000, 1000});
-    Visualizer v(w);
-    v.set_simulation_rectangle(sim.get_simulation_rectangle());
-
-    for (int i = 0; i < 18; ++i) {
-        for (int j = 0; j < 18; ++j) {
-            Physics::CircleCollider collider = {{{10.0f + 15*i, 10.0f+15*j}}, 5.0f};
+    collider = {{{100.0f + 300.0f, 10.0f+10}}, 15.0f};
+    item = {1.0f, collider.m_position, {-80.0f, 0.0f}};
+    sim.add_circle({collider, item});
+#else
+    for (int i = 0; i < 60; ++i) {
+        for (int j = 0; j < 65; ++j) {
+            Physics::CircleCollider collider = {{{10.0f + 32.0f * i, 10.0f+32*j}}, 5.0f};
             Physics::PhysicsItem item = {1.0f, collider.m_position, {80.0f, 0.0f}};
             //Physics::PhysicsItem item = {1.0f, collider.m_position, {cosf(i + j*j) * 100.0f, sinf(i + j*j) * 100.0f}};
             sim.add_circle({ 
@@ -69,8 +70,12 @@ int main(int argc, char** argv) {
             
         }
     }
+#endif
+    // 1. друг на друга. 2. близко, произвольные скорости
     sim.add_force(Physics::earth_gravitation());
     //std::this_thread::sleep_for(10s);
+    Visualizer v(w);
+    v.set_simulation_rectangle(sim.get_simulation_rectangle());
     std::jthread phys_thread(physics_f<decltype(sim)>, &sim);
 
     bool quit = false;
@@ -86,6 +91,7 @@ int main(int argc, char** argv) {
         auto frame_objects = sim.get_objects();
         for (const auto& item : frame_objects) {
             v.draw_circle(item.m_phys_item.position, item.m_collider.m_radius, v.some_color(item.m_phys_item.id));
+            //v.draw_line(item.m_phys_item.position, item.m_phys_item.position+item.m_phys_item.speed, {200, 200, 0, 255});
         }
         v.draw_rectangle({0.0f, 0.0f}, sim.get_simulation_rectangle(), {128, 128, 0, 255});
 
