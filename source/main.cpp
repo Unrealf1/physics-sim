@@ -26,17 +26,27 @@ void physics_f(std::stop_token stoken, Sim* simulation) {
     auto last_frame = std::chrono::steady_clock::now() - 10ms;
     auto frame_duration = 1ms;
     float fps = 0.0f;
+    uint64_t frame = 1;
+    uint64_t measure_every = 100;
+    auto last_measure_time = std::chrono::steady_clock::now();
     auto& sim = *simulation;
     while (!stoken.stop_requested()) {
         auto now = std::chrono::steady_clock::now();
+        if (frame % measure_every == 0) {
+            float ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_measure_time).count();
+            float local_fps = measure_every * 1000.0f / ms;
+            fps = local_fps;
+            last_measure_time = now;
+            spdlog::info("fps: {}", fps);
+        }
         auto expected_end_time = now + frame_duration;
         auto since_last_frame = now - last_frame;
         last_frame = now;
         auto dt = float(std::chrono::duration_cast<std::chrono::milliseconds>(since_last_frame).count()) / 1000.0f;
-        sim.step(0.005f);
-        //sim.step(dt);   
-        fps = fps * 0.9f + 1.0f/dt;
-        spdlog::info("fps: {}", fps);
+        //sim.step(0.002f);
+        sim.step(dt);   
+        //fps = fps * 0.9f + 1.0f/dt;
+        ++frame;
         std::this_thread::sleep_until(expected_end_time);
     }
 }
@@ -59,10 +69,10 @@ int main() {
     item = {1.0f, collider.m_position, {-80.0f, 0.0f}};
     sim.add_circle({collider, item});
 #else
-    for (int i = 0; i < 18; ++i) {
-        for (int j = 0; j < 10; ++j) {
-            Physics::CircleCollider collider = {{{10.0f + 38.0f * i, 10.0f+38.0f*j}}, 16.0f};
-            Physics::PhysicsItem item = {1.0f, collider.m_position, {80.0f, 0.0f}};
+    for (int i = 0; i < 40; ++i) {
+        for (int j = 0; j < 50; ++j) {
+            Physics::CircleCollider collider = {{{30.0f + 58.0f * i, 30.0f+58.0f*j}}, 18.0f};
+            Physics::PhysicsItem item = {1.0f, collider.m_position, {60.0f, 0.0f}};
             //Physics::PhysicsItem item = {1.0f, collider.m_position, {cosf(i + j*j) * 100.0f, sinf(i + j*j) * 100.0f}};
             sim.add_circle({ 
                     collider,
@@ -97,6 +107,7 @@ int main() {
         v.draw_rectangle({0.0f, 0.0f}, sim.get_simulation_rectangle(), {128, 128, 0, 255});
 
         v.finish_frame();
+        std::this_thread::sleep_for(10ms);
     }
     phys_thread.request_stop();
 

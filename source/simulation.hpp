@@ -6,9 +6,11 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <mutex>
 
 #include <spdlog/spdlog.h>
 
+#include "glm/geometric.hpp"
 #include "simulation_object.hpp"
 #include "integrators.hpp"
 #include "collision_detectors.hpp"
@@ -23,6 +25,7 @@ namespace Physics {
         using objects_t = std::vector<SimulationObject>;
 
         objects_t get_objects() const {
+            std::lock_guard lg(m_objects_lock);
             return get_last_buffer();    
         }
 
@@ -83,13 +86,29 @@ namespace Physics {
                         if (is_unnecessary()) {
                             continue;
                         }            
-                        auto& v1 = copy.m_phys_item.speed;
-                        auto& v2 = collided_obj.m_phys_item.speed;
                         auto m1 = copy.m_phys_item.mass;
                         auto m2 = collided_obj.m_phys_item.mass;
                         float dm = m1 - m2;
                         float sm = m1 + m2;
-                        copy.m_phys_item.speed = (2 * m2 * v2 + v1 * dm) / sm;
+
+                        auto& v1 = copy.m_phys_item.speed;
+                        auto& v2 = collided_obj.m_phys_item.speed;
+                        auto dp = copy.m_phys_item.position - collided_obj.m_phys_item.position;
+                        glm::vec2 dp_rot = { -dp.y, dp.x };
+                        auto touch_vec = glm::normalize(dp_rot);
+                        //auto touch_point = collided_obj.m_phys_item.position + glm::normalize(dp) * collided_obj.m_collider.m_radius;
+
+                        auto proj_len_1 = glm::dot(touch_vec, v1);
+                        auto proj_1 = touch_vec * proj_len_1; // not changing during interaction
+                        auto other_1 = v1 - proj_1; //changes during interaction
+                        
+                        auto proj_len_2 = glm::dot(touch_vec, v2);
+                        auto proj_2 = touch_vec * proj_len_2; // not changing during interaction
+                        auto other_2 = v2 - proj_2; //changes during interaction
+
+                        auto changed_v = (2 * m2 * other_2 + other_1 * dm) / sm;
+
+                        copy.m_phys_item.speed = proj_1 + changed_v;
                     }
 
                     if ((copy.m_collider.is_colliding_x(m_simulation_rectangle.x) & (copy.m_phys_item.speed.x > 0.0f))
@@ -115,7 +134,7 @@ namespace Physics {
         }
 
     private:
-        std::mutex m_objects_lock;
+        mutable std::mutex m_objects_lock;
         objects_t m_objects_arrays[2];
         integrator_t m_integrator;
         std::atomic<uint8_t> m_active_index = 0; 
@@ -138,6 +157,7 @@ namespace Physics {
         }
 
         void switch_buffers() {
+            std::lock_guard lg(m_objects_lock);
             m_active_index = 1 - m_active_index;
         }
     };
