@@ -26,10 +26,6 @@ namespace Physics {
             return get_last_buffer();    
         }
 
-        const links_t& get_links() const {
-            return m_links;
-        }
-
         void add_circle(const SimulationObject& obj) {
             get_last_buffer().push_back(obj);
         }
@@ -38,22 +34,13 @@ namespace Physics {
             m_integrator.add_force(force);
         }
 
-        void add_link(const item_id_t& first, const item_id_t& second) {
-            const auto& buf = get_last_buffer();
-
-            m_links.emplace_back(
-                  std::ranges::find_if(buf, [&](const auto& item) { return item.m_phys_item.id == first; }) - std::begin(buf),
-                  std::ranges::find_if(buf, [&](const auto& item) { return item.m_phys_item.id == second; }) - std::begin(buf)
-            );
-        }
-
         void step(float dt) {
             const auto& last_buffer = get_last_buffer();
             auto& active_buffer = get_active_buffer();
             active_buffer.clear();
             active_buffer.resize(last_buffer.size());
             
-            const auto collisions = collision_detector_t::detect_collisions(last_buffer, m_links);
+            const auto collisions = collision_detector_t::detect_collisions(last_buffer);
 
             std::transform(
                 std::execution::par_unseq,
@@ -62,14 +49,6 @@ namespace Physics {
                 std::begin(active_buffer),
                 [dt, this](const SimulationObject& obj, const collision_t& collision) -> SimulationObject {
                     auto copy = obj;
-                    std::vector<item_id_t> linked;
-                    for (const auto& link : m_links) {
-                        if (link.first_idx == copy.m_phys_item.id) {
-                            linked.push_back(link.second_idx);
-                        } else if (link.second_idx == copy.m_phys_item.id) {
-                            linked.push_back(link.first_idx);
-                        }
-                    }
 
                     auto rays_collide = [](glm::vec2 p0, glm::vec2 p1, glm::vec2 q0, glm::vec2 q1) -> bool {
                         auto dp = p1 - p0;
@@ -92,22 +71,9 @@ namespace Physics {
                     
                     // process collisions
                     for (const SimulationObject& collided_obj : collision) {
-                        /*std::pair<glm::vec2, glm::vec2> my_ray = {
-                            copy.m_phys_item.position, 
-                            copy.m_phys_item.position + copy.m_phys_item.speed, 
-                        };
-
-                        std::pair<glm::vec2, glm::vec2> other_ray = {
-                            collided_obj.m_phys_item.position, 
-                            collided_obj.m_phys_item.position + copy.m_phys_item.speed, 
-                        };*/
                         //TODO: calc integrator step once
                         //for every item beforehand
                         auto is_unnecessary = [&]{
-                            auto it = std::ranges::find(linked, collided_obj.m_phys_item.id);
-                            if (it != linked.end()) {
-                                return false;
-                            }
                             auto new_item = m_integrator.update(dt, copy.m_phys_item);
                             auto new_item2 = m_integrator.update(dt, collided_obj.m_phys_item);
                             auto cur_dist = glm::distance(copy.m_phys_item.position, collided_obj.m_phys_item.position);
@@ -124,9 +90,6 @@ namespace Physics {
                         float dm = m1 - m2;
                         float sm = m1 + m2;
                         copy.m_phys_item.speed = (2 * m2 * v2 + v1 * dm) / sm;
-                        /*using namespace std::chrono_literals;
-                        spdlog::warn("pause");
-                        std::this_thread::sleep_for(500ms);*/
                     }
 
                     if ((copy.m_collider.is_colliding_x(m_simulation_rectangle.x) & (copy.m_phys_item.speed.x > 0.0f))
@@ -157,7 +120,6 @@ namespace Physics {
         integrator_t m_integrator;
         std::atomic<uint8_t> m_active_index = 0; 
         glm::vec2 m_simulation_rectangle;
-        links_t m_links;
 
         objects_t& get_active_buffer() {
             return m_objects_arrays[m_active_index];

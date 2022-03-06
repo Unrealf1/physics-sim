@@ -49,25 +49,7 @@ int main() {
     engine::Window w(p);
     
     Physics::Simulation<Physics::ForwardEuler, Physics::SimpleCollisionDetector> sim({1820, 880});
-    auto add_square = [&](glm::vec2 bot_left, float len) {
-        glm::vec2 points[] = {
-            bot_left, {bot_left + glm::vec2(0.0f, -len)}, {bot_left + glm::vec2(len, -len)}, {bot_left + glm::vec2(len, 0.0f)}
-        };
-        
-        uint8_t last_idx = 0;
-        for (const auto& point : points) {
-            Physics::CircleCollider collider = {{{point}}, 10.0f};
-            Physics::PhysicsItem item = {1.0f, collider.m_position, {80.0f, 0.0f}};
-            sim.add_circle({collider, item});
-            last_idx = item.id;
-        }
-        sim.add_link(last_idx, last_idx - 1);
-        sim.add_link(last_idx - 1, last_idx - 2);
-        sim.add_link(last_idx - 2, last_idx - 3);
-        sim.add_link(last_idx - 3, last_idx);
-    };
-    add_square({500.0f, 20.0f}, 50.0f);
-#define SMALL
+//#define SMALL
 #ifdef SMALL
     Physics::CircleCollider collider = {{{100.0f + 10, 10.0f+10}}, 15.0f};
     Physics::PhysicsItem item = {1.0f, collider.m_position, {80.0f, 0.0f}};
@@ -76,12 +58,10 @@ int main() {
     collider = {{{100.0f + 300.0f, 10.0f+10}}, 15.0f};
     item = {1.0f, collider.m_position, {-80.0f, 0.0f}};
     sim.add_circle({collider, item});
-
-    sim.add_link(0, 1);
 #else
     for (int i = 0; i < 18; ++i) {
         for (int j = 0; j < 10; ++j) {
-            Physics::CircleCollider collider = {{{10.0f + 38.0f * i, 10.0f+38.0f*j}}, 8.0f};
+            Physics::CircleCollider collider = {{{10.0f + 38.0f * i, 10.0f+38.0f*j}}, 16.0f};
             Physics::PhysicsItem item = {1.0f, collider.m_position, {80.0f, 0.0f}};
             //Physics::PhysicsItem item = {1.0f, collider.m_position, {cosf(i + j*j) * 100.0f, sinf(i + j*j) * 100.0f}};
             sim.add_circle({ 
@@ -113,11 +93,6 @@ int main() {
         for (const auto& item : frame_objects) {
             v.draw_circle(item.m_phys_item.position, item.m_collider.m_radius, v.some_color(item.m_phys_item.id));
             //v.draw_line(item.m_phys_item.position, item.m_phys_item.position+item.m_phys_item.speed, {200, 200, 0, 255});
-        }
-        for (const auto link : sim.get_links()) {
-            auto& first = *std::ranges::find_if(frame_objects, [&](const auto& item){ return item.m_phys_item.id == link.first_idx; });
-            auto& second = *std::ranges::find_if(frame_objects, [&](const auto& item){ return item.m_phys_item.id == link.second_idx; });
-            v.draw_line(first.m_phys_item.position, second.m_phys_item.position, {255, 200, 100, 255});
         }
         v.draw_rectangle({0.0f, 0.0f}, sim.get_simulation_rectangle(), {128, 128, 0, 255});
 
