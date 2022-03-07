@@ -43,7 +43,7 @@ namespace Physics {
         return { [](const PhysicsItem& item) -> glm::vec2 { return { 0.0f, 9.8f * item.mass }; } };
     }
 
-    inline Force demping(float k) {
+    inline Force damping(float k) {
         auto calc = [=](const PhysicsItem& item) {
             return - k * item.speed;
         };

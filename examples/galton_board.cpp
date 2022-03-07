@@ -33,7 +33,7 @@ int main() {
     uint32_t sim_height = 900;
     Physics::Simulation<Physics::ForwardEuler, Physics::SimpleCollisionDetector> sim({sim_width, sim_height});
     sim.add_force(Physics::earth_gravitation());
-    sim.add_force(Physics::demping(0.1f));
+    sim.add_force(Physics::damping(0.1f));
 
     float top_offset = 300.0f;
     float bottom_offset = 200.0f;
