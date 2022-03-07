@@ -26,6 +26,7 @@ int main() {
     engine::WindowParams p {};
     p.w = 1000;
     p.h = 900;
+    p.title = "Galton board";
 
     engine::Window w(p);
     
@@ -33,7 +34,7 @@ int main() {
     uint32_t sim_height = 900;
     Physics::Simulation<Physics::ForwardEuler, Physics::SimpleCollisionDetector> sim({sim_width, sim_height});
     sim.add_force(Physics::earth_gravitation());
-    sim.add_force(Physics::damping(0.1f));
+    sim.add_force(Physics::damping(0.09f));
 
     float top_offset = 300.0f;
     float bottom_offset = 200.0f;
@@ -64,7 +65,7 @@ int main() {
         bool even_layer = layer % 2 == 0;
         uint32_t current_nobs = even_layer ? num_knobs - 1 : num_knobs;
         float top_start = top_offset + float(layer) * section_len;
-        float left_start = sides_offset + even_layer * section_len / 2.0f;
+        float left_start = sides_offset + section_len / 2.0f + even_layer * section_len / 2.0f;
 
         for (float knob = 0; knob < float(current_nobs); knob += 1.0f) {
             sim.add_static_collider(std::make_unique<Physics::StaticCircleCollider>(
@@ -75,8 +76,8 @@ int main() {
 
     // Add falling items
     float circle_radius = knob_radius / 3.0f;
-    glm::vec2 box_start = { float(sim_width) / 2.0f - section_len / 2.0f, circle_radius}; // left top
-    glm::vec2 box_end = { box_start.x + section_len, top_offset - knob_radius - circle_radius}; // right bot
+    glm::vec2 box_start = { float(sim_width) / 2.0f - section_len / 2.0f, circle_radius }; // left top
+    glm::vec2 box_end = { box_start.x + section_len, top_offset - 2 * knob_radius - circle_radius }; // right bot
     float circle_area = circle_radius * 2.0f * 1.1f;
     float circles_w = std::floor((box_end.x - box_start.x) / (circle_area));
     float circles_h = std::floor((box_end.y - box_start.y) / (circle_area));

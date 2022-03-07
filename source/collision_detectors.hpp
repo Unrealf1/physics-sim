@@ -113,10 +113,10 @@ namespace Physics {
                     };
                     auto check_bucket_collision = [&](const glm::vec2& point) -> bool {
                         //TODO: test && vs &
-                        return point.x <= bucket_start.x + bucket_len 
-                                & point.x >= bucket_start.x
-                                & point.y <= bucket_start.y + bucket_len
-                                & point.y >= bucket_start.y;
+                        return (point.x <= bucket_start.x + bucket_len)
+                                & (point.x >= bucket_start.x)
+                                & (point.y <= bucket_start.y + bucket_len)
+                                & (point.y >= bucket_start.y);
                     };
                     bool bucket_collision = std::any_of(std::begin(points_to_check), std::end(points_to_check), check_bucket_collision);
                     if (bucket_collision) {
