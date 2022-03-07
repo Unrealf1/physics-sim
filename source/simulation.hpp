@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <memory>
+#include <utility>
 #include <vector>
 #include <algorithm>
 #include <atomic>
@@ -29,6 +30,10 @@ namespace Physics {
             return get_last_buffer();    
         }
 
+        const auto& get_static_colliders() const {
+            return m_static_colliders;
+        }
+
         void add_circle(const SimulationObject& obj) {
             get_last_buffer().push_back(obj);
         }
@@ -37,43 +42,25 @@ namespace Physics {
             m_integrator.add_force(force);
         }
 
+        void add_static_collider(std::unique_ptr<StaticCollider>&& collider) {
+            m_static_colliders.push_back(std::move(collider));
+        }
+
         void step(float dt) {
             const auto& last_buffer = get_last_buffer();
             auto& active_buffer = get_active_buffer();
             active_buffer.clear();
             active_buffer.resize(last_buffer.size());
             
-            const auto collisions = collision_detector_t::detect_collisions(last_buffer);
-
+            const auto collisions = collision_detector_t::detect_collisions(last_buffer, m_static_colliders);
             std::transform(
                 std::execution::par_unseq,
                 std::begin(last_buffer), std::end(last_buffer),
                 std::begin(collisions),
                 std::begin(active_buffer),
-                [dt, this](const SimulationObject& obj, const collision_t& collision) -> SimulationObject {
-                    auto copy = obj;
-
-                    auto rays_collide = [](glm::vec2 p0, glm::vec2 p1, glm::vec2 q0, glm::vec2 q1) -> bool {
-                        auto dp = p1 - p0;
-                        auto dq = q1 - q0;
-                        float dx = q0.x - p0.x;
-                        float dy = q0.y - p0.y;
-                        float det = dq.x * dp.y - dq.y * dp.x;
-                        if (det == 0.0f) {
-                            return false;
-                        }
-                        float u = (dy * dq.x - dx * dq.y) / det;
-                        float v = (dy * dp.x - dx * dp.y) / det;
-                        return (u >= 0) & (v >= 0);
-
-                        float tq = (q0.x * dp.y - dp.x * q0.y) / (dp.x * dq.y * p0.y - dq.x * p0.x * dp.y);
-                        float tp = (tq * dq.x + q0.x - p0.x) / dp.x;
-                        return tq >= 0.0f && tp >= 0.0f;
-
-                    };
-                    
+                [dt, this](SimulationObject copy, const Collision& collision) -> SimulationObject {
                     // process collisions
-                    for (const SimulationObject& collided_obj : collision) {
+                    for (const SimulationObject& collided_obj : collision.objects) {
                         //TODO: calc integrator step once
                         //for every item beforehand
                         auto is_unnecessary = [&]{
@@ -96,7 +83,6 @@ namespace Physics {
                         auto dp = copy.m_phys_item.position - collided_obj.m_phys_item.position;
                         glm::vec2 dp_rot = { -dp.y, dp.x };
                         auto touch_vec = glm::normalize(dp_rot);
-                        //auto touch_point = collided_obj.m_phys_item.position + glm::normalize(dp) * collided_obj.m_collider.m_radius;
 
                         auto proj_len_1 = glm::dot(touch_vec, v1);
                         auto proj_1 = touch_vec * proj_len_1; // not changing during interaction
@@ -109,6 +95,24 @@ namespace Physics {
                         auto changed_v = (2 * m2 * other_2 + other_1 * dm) / sm;
 
                         copy.m_phys_item.speed = proj_1 + changed_v;
+                    }
+
+                    for (const StaticCollider* st_ptr : collision.statics) {
+                        const auto& st = *st_ptr;
+                        auto is_unnecessary = [&]{
+                            auto new_item = m_integrator.update(dt / 20.0f, copy.m_phys_item);
+                            auto cur_dist = st.distance(copy.m_phys_item.position);
+                            auto new_dist = st.distance(new_item.position);
+                            return new_dist > cur_dist;
+                        };
+                        if (is_unnecessary()) {
+                            continue;
+                        }
+                        auto collision_point = st.collision_point(copy.m_collider);
+                        auto change_direction = glm::normalize(collision_point - copy.m_collider.m_position);
+                        auto proj_changed_len = glm::dot(change_direction, copy.m_phys_item.speed);
+                        auto proj_changed = change_direction * proj_changed_len;
+                        copy.m_phys_item.speed -= proj_changed * 2.0f;
                     }
 
                     if ((copy.m_collider.is_colliding_x(m_simulation_rectangle.x) & (copy.m_phys_item.speed.x > 0.0f))
@@ -136,6 +140,8 @@ namespace Physics {
     private:
         mutable std::mutex m_objects_lock;
         objects_t m_objects_arrays[2];
+
+        std::vector<std::unique_ptr<StaticCollider>> m_static_colliders;
         integrator_t m_integrator;
         std::atomic<uint8_t> m_active_index = 0; 
         glm::vec2 m_simulation_rectangle;

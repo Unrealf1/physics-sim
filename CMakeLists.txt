@@ -29,10 +29,18 @@ include(cmake/Sanitizers.cmake)
 enable_sanitizers(project_options)
 
 file(GLOB_RECURSE SOURCES . source/*.cpp)
-add_executable(main ${SOURCES})
-add_executable(test test.cpp)
+add_library(lib STATIC ${SOURCES})
+target_include_directories(lib PUBLIC source)
+target_link_libraries(lib project_options project_warnings)
+target_link_libraries(lib SDL2 spdlog glm)
 
-target_link_libraries(main project_options project_warnings)
-target_link_libraries(main SDL2 spdlog glm)
-target_link_libraries(test SDL2 spdlog glm)
+add_executable(small examples/small.cpp)
+target_link_libraries(small lib)
+
+add_executable(random examples/random.cpp)
+target_link_libraries(random lib)
+
+add_executable(galton_board examples/galton_board.cpp)
+target_link_libraries(galton_board lib)
+
 

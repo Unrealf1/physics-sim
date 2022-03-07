@@ -5,37 +5,51 @@
 #include <vector>
 #include <execution>
 
-#include "glm/geometric.hpp"
 #include "simulation_object.hpp"
+#include "colliders.hpp"
 
 
 namespace Physics {
-    using collision_t = std::vector<std::reference_wrapper<const SimulationObject>>;
+    struct Collision {
+        std::vector<std::reference_wrapper<const SimulationObject>> objects;
+        std::vector<StaticCollider*> statics;
+    };
 
     template<typename T>
-    concept CollisionDetector = requires(std::vector<SimulationObject>& objects) {
-        { T::detect_collisions(objects) } -> std::same_as<std::vector<collision_t>>;
+    concept CollisionDetector = requires(const std::vector<SimulationObject>& objects, const std::vector<std::unique_ptr<StaticCollider>>& statics) {
+        { T::detect_collisions(objects, statics) } -> std::same_as<std::vector<Collision>>;
     };
 
     struct SimpleCollisionDetector {
-        static std::vector<collision_t> detect_collisions(const std::vector<SimulationObject>& objects) {
-            std::vector<collision_t> result(objects.size());
+        static std::vector<Collision> detect_collisions(
+                const std::vector<SimulationObject>& objects, 
+                const std::vector<std::unique_ptr<StaticCollider>>& statics
+        ) {
+            std::vector<Collision> result(objects.size());
             //TODO: for each inner vector reserve some constant memory
 
             for (size_t i = 0; i < objects.size(); ++i) {
+                // Detect object collisions
                 for (size_t j = i + 1; j < objects.size(); ++j) {
                     if (objects[i].m_collider.is_colliding(objects[j].m_collider)) {
-                        result[i].emplace_back(objects[j]);
-                        result[j].emplace_back(objects[i]);
+                        result[i].objects.emplace_back(objects[j]);
+                        result[j].objects.emplace_back(objects[i]);
                     } 
                 }
+                // Detect statics collisions
+                for (const auto& st : statics) {
+                    if (st->is_colliding(objects[i].m_collider)) {
+                        result[i].statics.push_back(st.get());
+                    }   
+                }
+
             }
 
             return result;
         } 
     };
 
-    
+    /*
     struct BucketCollisionDetector {
         static std::vector<collision_t> detect_collisions(const std::vector<SimulationObject>& objects) {
             std::vector<collision_t> result(objects.size());
@@ -117,11 +131,11 @@ namespace Physics {
 
             return result;
         } 
-    };
+    };*/
 
     struct EmptyCollisionDetector {
-        static std::vector<collision_t> detect_collisions(const std::vector<SimulationObject>& objects) {
-            std::vector<collision_t> result(objects.size());
+        static std::vector<Collision> detect_collisions(const std::vector<SimulationObject>& objects) {
+            std::vector<Collision> result(objects.size());
             return result;
         } 
     };

@@ -17,9 +17,9 @@ namespace Physics {
         float mass;
         glm::vec2 position;
         glm::vec2 speed;
+        bool is_static = false;
         item_id_t id = generate_item_id();
     };
-
 
 }
 

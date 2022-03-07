@@ -40,7 +40,7 @@ namespace Physics {
             std::vector<glm::vec2> force_vectors;
             force_vectors.reserve(m_forces.size());
             std::transform(
-                //std::execution::par_unseq, //TODO: why ce?
+                //std::execution::par_unseq, 
                 m_forces.begin(), m_forces.end(),
                 std::back_inserter(force_vectors),
                 [&item](Force& f) -> glm::vec2 { return f.calculate(item); }
@@ -59,6 +59,7 @@ namespace Physics {
                 item.mass,
                 new_position,
                 new_speed,
+                item.is_static,
                 item.id
             };   
         }

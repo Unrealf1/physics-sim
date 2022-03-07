@@ -3,6 +3,7 @@
 
 #include <glm/glm.hpp>
 #include <functional>
+#include <cassert>
 
 #include "physics_item.hpp"
 
@@ -40,6 +41,13 @@ namespace Physics {
 
     inline Force earth_gravitation() {
         return { [](const PhysicsItem& item) -> glm::vec2 { return { 0.0f, 9.8f * item.mass }; } };
+    }
+
+    inline Force demping(float k) {
+        auto calc = [=](const PhysicsItem& item) {
+            return - k * item.speed;
+        };
+        return { calc };
     }
 
 }
