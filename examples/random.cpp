@@ -33,7 +33,7 @@ int main() {
     for (int i = 0; i < 30; ++i) {
         for (int j = 0; j < 30; ++j) {
 
-            Physics::CircleCollider collider = {{{30.0f + 10.0f * i, 30.0f+10.0f*j}}, 3.0f};
+            Physics::CircleCollider collider = {{{30.0f + 10.0f * float(i), 30.0f+10.0f*float(j)}}, 3.0f};
             Physics::PhysicsItem item = {1.0f, collider.m_position, {60.0f, 0.0f}};
             //Physics::PhysicsItem item = { 1.0f, collider.m_position, {cosf(i + j*j) * 100.0f, sinf(i + j*j) * 100.0f} };
             sim.add_circle({ 

@@ -49,9 +49,9 @@ void physics_thread(std::stop_token stoken, Sim* simulation, PhysicsParameters p
 
         if (frame_duration > 0ms) {
             auto expected_end_time = now + frame_duration;
-            last_frame = now;
             std::this_thread::sleep_until(expected_end_time);
         }
+        last_frame = now;
         ++frame;
     }
 }
@@ -68,6 +68,4 @@ Physics::SimulationObject create_sim_object(glm::vec2 position, glm::vec2 veloci
     Physics::PhysicsItem item = {mass, collider.m_position, velocity, is_static};
     return {collider, item};
 }
-
-inline static float huge_mass = std::numeric_limits<float>::max() / 100.0f;
 

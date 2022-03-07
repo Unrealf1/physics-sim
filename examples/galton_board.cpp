@@ -45,8 +45,8 @@ int main() {
     uint32_t num_sections = 10;
     float section_len = field_width / float(num_sections);
     uint32_t num_layers = uint32_t(std::ceil(field_height / section_len));
-    uint32_t num_nobs = num_sections;
-    float nob_radius = 10.0f; // section_len * 2.0f / 3.0f;
+    uint32_t num_knobs = num_sections;
+    float knob_radius = 10.0f; // section_len * 2.0f / 3.0f;
 
     // Add separators
     for (uint32_t section = 0; section < num_sections + 1; ++section) {
@@ -62,21 +62,21 @@ int main() {
     // Add immovable circles
     for (uint32_t layer = 0; layer < num_layers; ++layer) {
         bool even_layer = layer % 2 == 0;
-        uint32_t current_nobs = even_layer ? num_nobs - 1 : num_nobs;
+        uint32_t current_nobs = even_layer ? num_knobs - 1 : num_knobs;
         float top_start = top_offset + float(layer) * section_len;
         float left_start = sides_offset + even_layer * section_len / 2.0f;
 
-        for (float nob = 0; nob < float(current_nobs); nob += 1.0f) {
+        for (float knob = 0; knob < float(current_nobs); knob += 1.0f) {
             sim.add_static_collider(std::make_unique<Physics::StaticCircleCollider>(
-                glm::vec2{left_start + nob * section_len, top_start}, nob_radius)
+                glm::vec2{left_start + knob * section_len, top_start}, knob_radius)
             );
         }
     }
 
     // Add falling items
-    float circle_radius = nob_radius / 4.0f;
+    float circle_radius = knob_radius / 3.0f;
     glm::vec2 box_start = { float(sim_width) / 2.0f - section_len / 2.0f, circle_radius}; // left top
-    glm::vec2 box_end = { box_start.x + section_len, top_offset - nob_radius - circle_radius}; // right bot
+    glm::vec2 box_end = { box_start.x + section_len, top_offset - knob_radius - circle_radius}; // right bot
     float circle_area = circle_radius * 2.0f * 1.1f;
     float circles_w = std::floor((box_end.x - box_start.x) / (circle_area));
     float circles_h = std::floor((box_end.y - box_start.y) / (circle_area));
@@ -106,13 +106,13 @@ int main() {
 
     Visualizer v(w);
     v.set_simulation_rectangle(sim.get_simulation_rectangle());
-    std::jthread phys_thread(make_physics_thread(&sim, { .fps_limit = 300.0f } ));
+    std::jthread phys_thread(make_physics_thread(&sim, { .fps_limit = 0.0f } ));
 
     bool quit = false;
     SDL_Event event;
-    while(!quit){
-        while(SDL_PollEvent(&event)){
-            switch(event.type){
+    while(!quit) {
+        while(SDL_PollEvent(&event)) {
+            switch(event.type) {
                 case SDL_QUIT:
                     quit = true;
                     break;

@@ -104,9 +104,8 @@ namespace Physics {
         }
 
         //TODO ?
-        float distance(glm::vec2 point) const override {
+        float distance(glm::vec2) const override {
             return 0.0f;
-            //return glm::distance(m_start + m_diff * glm::length(m_end - m_start) / 2.0f, point);     
         }
 
         glm::vec2 collision_point(const CircleCollider& circle) const override {

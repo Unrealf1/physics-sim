@@ -5,7 +5,6 @@
 #include <utility>
 #include <vector>
 #include <algorithm>
-#include <atomic>
 #include <chrono>
 #include <mutex>
 
@@ -143,7 +142,7 @@ namespace Physics {
 
         std::vector<std::unique_ptr<StaticCollider>> m_static_colliders;
         integrator_t m_integrator;
-        std::atomic<uint8_t> m_active_index = 0; 
+        uint8_t m_active_index = 0; 
         glm::vec2 m_simulation_rectangle;
 
         objects_t& get_active_buffer() {
