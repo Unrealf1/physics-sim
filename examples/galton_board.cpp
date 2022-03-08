@@ -34,7 +34,7 @@ int main() {
     uint32_t sim_height = 900;
     Physics::Simulation<Physics::ForwardEuler, Physics::SimpleCollisionDetector> sim({sim_width, sim_height});
     sim.add_force(Physics::earth_gravitation());
-    sim.add_force(Physics::damping(0.09f));
+    sim.add_force(Physics::damping(0.17f));
 
     float top_offset = 300.0f;
     float bottom_offset = 200.0f;
@@ -107,7 +107,7 @@ int main() {
 
     Visualizer v(w);
     v.set_simulation_rectangle(sim.get_simulation_rectangle());
-    std::jthread phys_thread(make_physics_thread(&sim, { .fps_limit = 0.0f } ));
+    std::jthread phys_thread(make_physics_thread(&sim, { .physics_step = 0.01, .fps_limit = 0.0f } ));
 
     bool quit = false;
     SDL_Event event;
