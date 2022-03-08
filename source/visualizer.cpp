@@ -56,11 +56,10 @@ void Visualizer::finish_frame() {
 }
 float Visualizer::to_screen_k() {
     auto window_dims = m_window.getDimentions();
-    return (float(window_dims.y) / m_simulation_rectangle.y);
+    return std::min((float(window_dims.y) / m_simulation_rectangle.y), (float(window_dims.x) / m_simulation_rectangle.x));
 
 }
 glm::vec2 Visualizer:: to_screen_coords(glm::vec2 coords) {
-    // For now assume width > height
     return coords * to_screen_k();
 }
 

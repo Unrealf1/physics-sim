@@ -25,8 +25,9 @@ using namespace std::chrono_literals;
 int main() {
     engine::WindowParams p {};
     p.w = 1000;
-    p.h = 900;
+    p.h = 800;
     p.title = "Galton board";
+    p.flags = SDL_WINDOW_RESIZABLE;
 
     engine::Window w(p);
     
@@ -107,7 +108,7 @@ int main() {
 
     Visualizer v(w);
     v.set_simulation_rectangle(sim.get_simulation_rectangle());
-    std::jthread phys_thread(make_physics_thread(&sim, { .physics_step = 0.01, .fps_limit = 0.0f } ));
+    std::jthread phys_thread(make_physics_thread(&sim, { .physics_step = 0.01f, .fps_limit = 0.0f } ));
 
     bool quit = false;
     SDL_Event event;
