@@ -50,7 +50,7 @@ void Visualizer::draw_circle(glm::vec2 position, float radius, color_t color) {
     }
 }
 void Visualizer::finish_frame() {
-    SDL_RenderCopy(m_renderer, m_texture, nullptr, nullptr);
+    //SDL_RenderCopy(m_renderer, m_texture, nullptr, nullptr);
     SDL_RenderPresent(m_renderer);
     SDL_RenderClear(m_renderer);
 }

@@ -22,7 +22,7 @@
 using namespace std::chrono_literals;
 
 
-int main() {
+int main(int, char *[]) {
     engine::WindowParams p {};
     p.w = 1000;
     p.h = 900;
@@ -136,4 +136,5 @@ int main() {
         std::this_thread::sleep_for(10ms);
     }
     phys_thread.request_stop();
+    return 0;
 }
