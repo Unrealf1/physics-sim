@@ -13,11 +13,13 @@ using namespace std::chrono_literals;
 struct PhysicsParameters {
     float physics_step = 0.0f;
     float fps_limit = 0.0f;
+    std::chrono::milliseconds start_delay = 0ms;
     uint64_t measure_period = 100;
 };
 
 template<typename Sim>
 void physics_thread(std::stop_token stoken, Sim* simulation, PhysicsParameters parameters) {
+    std::this_thread::sleep_for(parameters.start_delay);
     auto& physics_step = parameters.physics_step;
     auto& fps_limit = parameters.fps_limit;
     auto& measure_period = parameters.measure_period;

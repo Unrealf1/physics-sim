@@ -22,8 +22,8 @@ using namespace std::chrono_literals;
 
 int main(int, char *[]) {
     engine::WindowParams p {};
-    p.w = 1820;
-    p.h = 880;
+    p.w = 820;
+    p.h = 380;
 
     engine::Window w(p);
     
