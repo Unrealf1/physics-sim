@@ -16,7 +16,6 @@
 #include <spdlog/spdlog.h>
 #include <SDL.h>
 
-
 #include "colliders.hpp"
 #include "collision_detectors.hpp"
 #include "forces.hpp"
@@ -50,7 +49,8 @@ int main(int, char *[]) {
     
     uint32_t sim_width = 1000;
     uint32_t sim_height = 900;
-    Physics::Simulation<Physics::ForwardEuler, Physics::SimpleCollisionDetector> sim({sim_width, sim_height});
+
+    Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<6>> sim({sim_width, sim_height});
     sim.add_force(Physics::earth_gravitation());
     sim.add_force(Physics::damping(0.17f));
 

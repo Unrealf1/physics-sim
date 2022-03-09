@@ -18,19 +18,19 @@ namespace Physics {
     };
 
     template<typename T>
-    concept CollisionDetector = requires(const std::vector<SimulationObject>& objects, const std::vector<std::unique_ptr<StaticCollider>>& statics) {
-        { T::detect_collisions(objects, statics) } -> std::same_as<std::vector<Collision>>;
+    concept CollisionDetector = requires(T detector, const std::vector<SimulationObject>& objects, const std::vector<std::unique_ptr<StaticCollider>>& statics) {
+        { detector.detect_collisions(objects, statics) } -> std::same_as<std::vector<Collision>>;
     };
 
     struct SimpleCollisionDetector {
-        static std::vector<Collision> detect_collisions(
+        std::vector<Collision> detect_collisions(
                 const std::vector<SimulationObject>& objects, 
                 const std::vector<std::unique_ptr<StaticCollider>>& statics
-        ) {
+        ) const {
             std::vector<Collision> result(objects.size());
             for (auto& col : result) {
-                col.objects.reserve(objects.size() / 100);
-                col.statics.reserve(statics.size() / 50);
+                col.objects.reserve(5);
+                col.statics.reserve(5);
             }
 
             for (size_t i = 0; i < objects.size(); ++i) {
@@ -56,16 +56,17 @@ namespace Physics {
         } 
     };
 
-    
+
+    template<uint64_t num_dim_buckets>
     struct BucketCollisionDetector {
-        static std::vector<Collision> detect_collisions(
+        std::vector<Collision> detect_collisions(
                 const std::vector<SimulationObject>& objects, 
                 const std::vector<std::unique_ptr<StaticCollider>>& statics
         ) {
             std::vector<Collision> result(objects.size());
             for (auto& col : result) {
-                col.objects.reserve(objects.size() / 100);
-                col.statics.reserve(statics.size() / 50);
+                col.objects.reserve(5);
+                col.statics.reserve(5);
             }
             
             std::vector<float> xs;
@@ -78,13 +79,13 @@ namespace Physics {
                 ys.push_back(obj.m_collider.m_position.y);
             }
 
+            // TODO: maybe ditch mins? or always scan entire field?
             auto max_x = *std::max_element(xs.begin(), xs.end());
             auto min_x = *std::min_element(xs.begin(), xs.end());
             auto max_y = *std::max_element(ys.begin(), ys.end());
             auto min_y = *std::min_element(ys.begin(), ys.end());
-            //spdlog::info("max_y = {}; min_y = {};", max_y, min_y);
-            //TODO: something more intellectual?
-            size_t num_dim_buckets = 10;
+
+            //TODO: something more intellectual than constant number of uniform buckets?
             float bucket_len = std::max(max_x - min_x, max_y - min_y) / float(num_dim_buckets);
             using bucket_t = std::vector<size_t>;
             //TODO: reserve memory for each bucket
@@ -94,7 +95,7 @@ namespace Physics {
                 auto col_num = bucket_idx % num_dim_buckets;
                 auto line_num = bucket_idx / num_dim_buckets;
 
-                return {float(col_num) * bucket_len, float(line_num) * bucket_len};
+                return { float(col_num) * bucket_len + min_x, float(line_num) * bucket_len + min_y };
             };
             
             for (size_t i = 0; i < objects.size(); ++i) {
@@ -103,7 +104,6 @@ namespace Physics {
                     //TODO: keep bucket dimentions in loop, do not recalculate labda for it
                     
                     // TODO: for now assume, that bucket is not smaller than circle. may be bad.
-                    auto bucket_start = get_bucket_start(idx);
                     glm::vec2 points_to_check[] = {
                         obj.m_collider.m_position, 
                         obj.m_collider.m_position + glm::vec2(0.0f, obj.m_collider.m_radius),
@@ -111,12 +111,13 @@ namespace Physics {
                         obj.m_collider.m_position + glm::vec2(obj.m_collider.m_radius, 0.0f),
                         obj.m_collider.m_position + glm::vec2(-obj.m_collider.m_radius, 0.0f)
                     };
+                    auto bucket_start = get_bucket_start(idx);
                     auto check_bucket_collision = [&](const glm::vec2& point) -> bool {
                         //TODO: test && vs &
                         return (point.x <= bucket_start.x + bucket_len)
-                                & (point.x >= bucket_start.x)
-                                & (point.y <= bucket_start.y + bucket_len)
-                                & (point.y >= bucket_start.y);
+                                && (point.x >= bucket_start.x)
+                                && (point.y <= bucket_start.y + bucket_len)
+                                && (point.y >= bucket_start.y);
                     };
                     bool bucket_collision = std::any_of(std::begin(points_to_check), std::end(points_to_check), check_bucket_collision);
                     if (bucket_collision) {
@@ -131,8 +132,8 @@ namespace Physics {
                         auto index = bucket[i];
                         auto other_index = bucket[j];
                         if (objects[index].m_collider.is_colliding(objects[other_index].m_collider)) {
-                            result[index].objects.emplace_back(objects[j]);
-                            result[other_index].objects.emplace_back(objects[i]);
+                            result[index].objects.emplace_back(objects[other_index]);
+                            result[other_index].objects.emplace_back(objects[index]);
                         } 
                     }
                 }
@@ -146,16 +147,15 @@ namespace Physics {
                     }   
                 }
             }
-            //TODO: remove possible duplicates
-            /*
-            for (auto& res : result) {
-                //TODO: properly use ranges and unique
-                std::ranges::sort(res.objects, [](const SimulationObject& obj1, const SimulationObject& obj2) {
-                        return obj1.m_phys_item.id < obj2.m_phys_item.id;
-                });
-                
 
-            }*/
+            //TODO: is this necessary and/or worth it?
+            for (auto& res : result) {
+                auto ref_to_id = [](const auto& item) { return item.get().m_phys_item.id; };
+                std::ranges::sort(res.objects, {}, ref_to_id);
+                auto duplicates = std::ranges::unique(res.objects, {}, ref_to_id);
+                res.objects.erase(duplicates.begin(), duplicates.end());
+            }
+            
             return result;
         } 
     };

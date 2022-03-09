@@ -27,7 +27,7 @@ int main(int, char *[]) {
 
     engine::Window w(p);
     
-    Physics::Simulation<Physics::ForwardEuler, Physics::SimpleCollisionDetector> sim({920, 680});
+    Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<2>> sim({920, 680});
     sim.add_force(Physics::earth_gravitation());
     Physics::CircleCollider collider = {{{100.0f + 10, 10.0f+10}}, 15.0f};
     Physics::PhysicsItem item = {1.0f, collider.m_position, {80.0f, 0.0f}};

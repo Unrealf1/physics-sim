@@ -27,7 +27,7 @@ int main(int, char *[]) {
 
     engine::Window w(p);
     
-    Physics::Simulation<Physics::ForwardEuler, Physics::SimpleCollisionDetector> sim({920, 680});
+    Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<2>> sim({920, 680});
     sim.add_force(Physics::earth_gravitation());
     
     for (int i = 0; i < 30; ++i) {
@@ -46,7 +46,7 @@ int main(int, char *[]) {
 
     Visualizer v(w);
     v.set_simulation_rectangle(sim.get_simulation_rectangle());
-    std::jthread phys_thread(make_physics_thread(&sim, { .physics_step = 0.001f } ));
+    std::jthread phys_thread(make_physics_thread(&sim, { .physics_step = 0.0005f } ));
 
     bool quit = false;
     SDL_Event event;
@@ -61,7 +61,7 @@ int main(int, char *[]) {
         auto frame_objects = sim.get_objects();
         for (const auto& item : frame_objects) {
             v.draw_circle(item.m_phys_item.position, item.m_collider.m_radius, v.some_color(item.m_phys_item.id));
-            v.draw_line(item.m_phys_item.position, item.m_phys_item.position+item.m_phys_item.speed * 0.1f * item.m_phys_item.mass, {200, 200, 0, 255});
+            //v.draw_line(item.m_phys_item.position, item.m_phys_item.position+item.m_phys_item.speed * 0.1f * item.m_phys_item.mass, {200, 200, 0, 255});
         }
         v.draw_rectangle({0.0f, 0.0f}, sim.get_simulation_rectangle(), {128, 128, 0, 255});
 

@@ -51,7 +51,7 @@ namespace Physics {
             active_buffer.clear();
             active_buffer.resize(last_buffer.size());
             
-            const auto collisions = collision_detector_t::detect_collisions(last_buffer, m_static_colliders);
+            const auto collisions = m_collision_detector.detect_collisions(last_buffer, m_static_colliders);
             std::transform(
                 std::execution::par_unseq,
                 std::begin(last_buffer), std::end(last_buffer),
@@ -94,6 +94,9 @@ namespace Physics {
                         auto changed_v = (2 * m2 * other_2 + other_1 * dm) / sm;
 
                         copy.m_phys_item.speed = proj_1 + changed_v;
+                        if (copy.m_phys_item.speed != copy.m_phys_item.speed) {
+                            spdlog::warn("m1: {}, m2: {}, proj_len_1: {}, proj_len_2: {}, dp: {}, {}", m1, m2, proj_len_1, proj_len_2, dp.x, dp.y);
+                        }
                     }
 
                     for (const StaticCollider* st_ptr : collision.statics) {
@@ -139,6 +142,7 @@ namespace Physics {
     private:
         mutable std::mutex m_objects_lock;
         objects_t m_objects_arrays[2];
+        collision_detector_t m_collision_detector;
 
         std::vector<std::unique_ptr<StaticCollider>> m_static_colliders;
         integrator_t m_integrator;
