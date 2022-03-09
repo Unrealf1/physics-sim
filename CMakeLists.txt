@@ -17,6 +17,7 @@ CPMAddPackage(
     "SDL_X11 ON"
   URL "https://www.libsdl.org/release/SDL2-2.0.18.zip"
 )
+
 CPMAddPackage("gh:gabime/spdlog@1.9.2")
 
 add_library(project_options INTERFACE)
@@ -43,4 +44,9 @@ target_link_libraries(random lib)
 add_executable(galton_board examples/galton_board.cpp)
 target_link_libraries(galton_board lib)
 
-
+if (WIN32)
+    add_custom_command(TARGET galton_board POST_BUILD 
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${CMAKE_BINARY_DIR}\\_deps\\sdl2-build\\SDL2.dll" 
+            "${CMAKE_BINARY_DIR}\\SDL2.dll")
+endif()
