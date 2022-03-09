@@ -1,13 +1,21 @@
 #include <thread>
 #include <chrono>
+#include <iterator>
 #include <memory>
+#include <ranges>
 #include <stop_token>
+#include <string>
 #include <thread>
 #include <functional>
 #include <limits>
+#include <fstream>
+#include <unordered_set>
+#include <algorithm>
+#include <filesystem>
 
 #include <spdlog/spdlog.h>
 #include <SDL.h>
+
 
 #include "colliders.hpp"
 #include "collision_detectors.hpp"
@@ -22,13 +30,22 @@
 using namespace std::chrono_literals;
 
 
+std::filesystem::path get_prediction_dir() {
+    return std::filesystem::path("./data");
+}
+
+std::filesystem::path get_prediction_path(size_t section_idx) {
+    return get_prediction_dir()  / (std::to_string(section_idx) + ".txt");
+}
+
 int main() {
+    std::this_thread::sleep_for(500ms);
     engine::WindowParams p {};
     p.w = 1000;
-    p.h = 800;
+    p.h = 900;
     p.title = "Galton board";
     p.flags = SDL_WINDOW_RESIZABLE;
-
+    
     engine::Window w(p);
     
     uint32_t sim_width = 1000;
@@ -48,7 +65,22 @@ int main() {
     float section_len = field_width / float(num_sections);
     uint32_t num_layers = uint32_t(std::ceil(field_height / section_len));
     uint32_t num_knobs = num_sections;
-    float knob_radius = 10.0f; // section_len * 2.0f / 3.0f;
+    float knob_radius = 10.0f; 
+
+    std::vector<std::unordered_set<Physics::item_id_t>> section_predictions(num_sections + 2);
+    for (uint32_t section = 0; section < section_predictions.size(); ++section) {
+        auto prediction_path = get_prediction_path(section);
+        if (!std::filesystem::exists(prediction_path)) {
+            spdlog::warn("can't find prediction for section {}. Skipping (it will be generated after this run)", section);
+            continue;
+        }
+        std::ifstream ifs(prediction_path);
+        auto iter = std::istream_iterator<Physics::item_id_t>(ifs);
+        std::copy(
+            iter, std::istream_iterator<Physics::item_id_t>{}, 
+            std::inserter(section_predictions[section], section_predictions[section].begin())
+        );        
+    }
 
     // Add separators
     for (uint32_t section = 0; section < num_sections + 1; ++section) {
@@ -82,8 +114,6 @@ int main() {
     float circle_area = circle_radius * 2.0f * 1.1f;
     float circles_w = std::floor((box_end.x - box_start.x) / (circle_area));
     float circles_h = std::floor((box_end.y - box_start.y) / (circle_area));
-    spdlog::info("w = {}; h = {}", circles_w, circles_h);
-    spdlog::info("start: {},{}; end: {},{}", box_start.x, box_start.y, box_end.x, box_end.y);
     uint64_t num_circles = 0;
     for (float j = 0.0f; j < circles_h; j += 1.0f) {
         for (float i = - circles_h + j; i < circles_w + circles_h - j; i += 1.0f) {
@@ -98,6 +128,7 @@ int main() {
         }
     }
     spdlog::info("launching simulaiton with {} circles", num_circles);
+
     // Add slides
     sim.add_static_collider(
         std::make_unique<Physics::StaticSegmentCollider>(glm::vec2{0.0f, 0.0f}, glm::vec2{box_start.x, box_end.y})
@@ -108,7 +139,7 @@ int main() {
 
     Visualizer v(w);
     v.set_simulation_rectangle(sim.get_simulation_rectangle());
-    std::jthread phys_thread(make_physics_thread(&sim, { .physics_step = 0.01f, .fps_limit = 0.0f } ));
+    std::jthread phys_thread(make_physics_thread(&sim, { .physics_step = 0.01f, .fps_limit = 0.0f, .start_delay = 2000ms } ));
 
     bool quit = false;
     SDL_Event event;
@@ -122,7 +153,13 @@ int main() {
         }
         auto frame_objects = sim.get_objects();
         for (const auto& item : frame_objects) {
-            auto color = item.m_phys_item.is_static ? color_t{255, 255, 255, 255} : v.some_color(item.m_phys_item.id);
+            auto section_idx = 0;
+            for (; section_idx < section_predictions.size(); ++section_idx) {
+                if (section_predictions[section_idx].contains(item.m_phys_item.id)) {
+                    break;
+                }
+            }
+            auto color = v.some_color(section_idx);
             v.draw_circle(item.m_phys_item.position, item.m_collider.m_radius, color);
             //v.draw_line(item.m_phys_item.position, item.m_phys_item.position+item.m_phys_item.speed * 0.1f * item.m_phys_item.mass, {200, 200, 0, 255});
         }
@@ -137,4 +174,23 @@ int main() {
         std::this_thread::sleep_for(10ms);
     }
     phys_thread.request_stop();
+
+    auto frame_objects = sim.get_objects();
+    float last_limit = 0.0f;
+
+    if (!std::filesystem::exists(get_prediction_dir())) {
+        std::filesystem::create_directory(get_prediction_dir());
+    }
+
+    for (size_t section_idx = 0; section_idx < num_sections + 2; ++section_idx) {
+        float limit = sides_offset + section_idx * section_len;
+        auto prediction_path = get_prediction_path(section_idx);
+        std::ofstream ofs(prediction_path);
+        auto iter = std::ostream_iterator<std::string>(ofs, "\n");
+        auto thing = std::views::all(frame_objects)
+            | std::views::filter([&](const auto& obj) { return (obj.m_phys_item.position.x <= limit) & (obj.m_phys_item.position.x > last_limit); })
+            | std::views::transform([](const auto& obj) { return std::to_string(obj.m_phys_item.id); });
+        std::copy(thing.begin(), thing.end(), iter);
+        last_limit = limit;
+    }
 }
