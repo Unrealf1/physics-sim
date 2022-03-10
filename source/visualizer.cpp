@@ -9,7 +9,7 @@ Visualizer::ColorRestorer::~ColorRestorer() {
     SDL_SetRenderDrawColor(m_renderer, r, g, b, a);
 }
 
-Visualizer::Visualizer(engine::Window& window) : m_window(window) {
+Visualizer::Visualizer(Window& window) : m_window(window) {
     auto surface = SDL_GetWindowSurface(window.m_window.get());
     m_texture = SDL_CreateTextureFromSurface(window.m_renderer.get(), surface);
     m_renderer = window.m_renderer.get();

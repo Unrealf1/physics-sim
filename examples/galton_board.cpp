@@ -39,13 +39,13 @@ std::filesystem::path get_prediction_path(size_t section_idx) {
 
 int main(int, char *[]) {
     std::this_thread::sleep_for(500ms);
-    engine::WindowParams p {};
+    WindowParams p {};
     p.w = 1000;
     p.h = 900;
     p.title = "Galton board";
     p.flags = SDL_WINDOW_RESIZABLE;
 
-    engine::Window w(p);
+    Window w(p);
     
     uint32_t sim_width = 1000;
     uint32_t sim_height = 900;
@@ -153,7 +153,7 @@ int main(int, char *[]) {
         }
         auto frame_objects = sim.get_objects();
         for (const auto& item : frame_objects) {
-            auto section_idx = 0;
+            size_t section_idx = 0;
             for (; section_idx < section_predictions.size(); ++section_idx) {
                 if (section_predictions[section_idx].contains(item.m_phys_item.id)) {
                     break;
@@ -183,7 +183,7 @@ int main(int, char *[]) {
     }
 
     for (size_t section_idx = 0; section_idx < num_sections + 2; ++section_idx) {
-        float limit = sides_offset + section_idx * section_len;
+        float limit = sides_offset + float(section_idx) * section_len;
         auto prediction_path = get_prediction_path(section_idx);
         std::ofstream ofs(prediction_path);
         auto iter = std::ostream_iterator<std::string>(ofs, "\n");

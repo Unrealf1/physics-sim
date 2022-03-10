@@ -20,7 +20,7 @@ class Visualizer {
 public:
     
 
-    Visualizer(engine::Window& window);
+    Visualizer(Window& window);
 
     void set_simulation_rectangle(glm::vec2 simulation_rectangle);
 
@@ -36,7 +36,7 @@ public:
 private:
     SDL_Texture* m_texture;
     SDL_Renderer* m_renderer;
-    engine::Window& m_window;
+    Window& m_window;
     glm::vec2 m_simulation_rectangle;
 
     float to_screen_k();

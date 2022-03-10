@@ -21,11 +21,11 @@ using namespace std::chrono_literals;
 
 
 int main(int, char *[]) {
-    engine::WindowParams p {};
+    WindowParams p {};
     p.w = 820;
     p.h = 380;
 
-    engine::Window w(p);
+    Window w(p);
     
     Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<2>> sim({920, 680});
     sim.add_force(Physics::earth_gravitation());

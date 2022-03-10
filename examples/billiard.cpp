@@ -22,12 +22,12 @@ using namespace std::chrono_literals;
 
 
 int main(int, char *[]) {
-    engine::WindowParams p {};
+    WindowParams p {};
     p.w = 450;
     p.h = 900;
     p.title = "billiard";
 
-    engine::Window w(p);
+    Window w(p);
     
     Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<3>> sim({500, 1000});
     sim.add_force(Physics::damping(0.3f));
