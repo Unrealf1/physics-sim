@@ -44,6 +44,9 @@ target_link_libraries(random lib)
 add_executable(galton_board examples/galton_board.cpp)
 target_link_libraries(galton_board lib)
 
+add_executable(billiard examples/billiard.cpp)
+target_link_libraries(billiard lib)
+
 if (WIN32)
     add_custom_command(TARGET galton_board POST_BUILD 
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
