@@ -11,8 +11,12 @@ bool CircleCollider::is_colliding_y(float border) const {
     return std::abs(m_position.y - border) <= m_radius;
 }
 
-bool CircleCollider::is_colliding(const CircleCollider& other) const { 
-    return glm::distance(other.m_position, m_position) <= other.m_radius + m_radius; 
+bool CircleCollider::is_colliding(const CircleCollider& other) const {
+    auto diff = other.m_position - m_position;
+    auto square_dist = diff.x * diff.x + diff.y * diff.y;
+    auto rad_sum = other.m_radius + m_radius;
+    return square_dist <= rad_sum * rad_sum;
+    //return glm::distance(other.m_position, m_position) <= other.m_radius + m_radius; 
 }
 bool CircleCollider::is_colliding(glm::vec2 ray_start, glm::vec2 ray_point) const {
     auto d = ray_point - ray_start;

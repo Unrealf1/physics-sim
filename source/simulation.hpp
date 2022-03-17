@@ -20,7 +20,9 @@ namespace Physics {
     template<Integrator integrator_t, CollisionDetector collision_detector_t>
     class Simulation {
     public:
-        Simulation(glm::vec2 simulation_rectangle) : m_simulation_rectangle(simulation_rectangle) {}
+        Simulation(glm::vec2 simulation_rectangle) 
+            : m_simulation_rectangle(simulation_rectangle)
+            , m_collision_detector(simulation_rectangle) {}
 
         using objects_t = std::vector<SimulationObject>;
 

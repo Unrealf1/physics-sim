@@ -50,7 +50,7 @@ int main(int, char *[]) {
     uint32_t sim_width = 1000;
     uint32_t sim_height = 900;
 
-    Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<6>> sim({sim_width, sim_height});
+    Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<9>> sim({sim_width, sim_height});
     sim.add_force(Physics::earth_gravitation());
     sim.add_force(Physics::damping(0.17f));
 
@@ -108,7 +108,7 @@ int main(int, char *[]) {
     }
 
     // Add falling items
-    float circle_radius = knob_radius / 3.0f;
+    float circle_radius = knob_radius / 5.0f;
     glm::vec2 box_start = { float(sim_width) / 2.0f - section_len / 2.0f, circle_radius }; // left top
     glm::vec2 box_end = { box_start.x + section_len, top_offset - 2 * knob_radius - circle_radius }; // right bot
     float circle_area = circle_radius * 2.0f * 1.1f;
@@ -139,7 +139,7 @@ int main(int, char *[]) {
 
     Visualizer v(w);
     v.set_simulation_rectangle(sim.get_simulation_rectangle());
-    std::jthread phys_thread(make_physics_thread(&sim, { .physics_step = 0.01f, .fps_limit = 0.0f, .start_delay = 2000ms } ));
+    std::jthread phys_thread(make_physics_thread(&sim, { .physics_step = 0.005f, .fps_limit = 0.0f, .start_delay = 200ms, .measure_period = 50 } ));
 
     bool quit = false;
     SDL_Event event;
@@ -169,6 +169,13 @@ int main(int, char *[]) {
             auto& st = *st_p;
             st.visualize(v); 
         }
+
+        glm::vec2 total_impulse(0.0f, 0.0f);
+        for (const auto& obj : frame_objects) {
+            total_impulse += obj.m_phys_item.mass * obj.m_phys_item.speed;
+        }
+        glm::vec2 impulse_start{1200.0f, 300.0f};
+        v.draw_line(impulse_start, impulse_start + total_impulse * 0.0001f, {255, 255, 0, 255});
 
         v.finish_frame();
         std::this_thread::sleep_for(10ms);
