@@ -108,7 +108,7 @@ int main(int, char *[]) {
     }
 
     // Add falling items
-    float circle_radius = knob_radius / 5.0f;
+    float circle_radius = knob_radius / 9.0f;
     glm::vec2 box_start = { float(sim_width) / 2.0f - section_len / 2.0f, circle_radius }; // left top
     glm::vec2 box_end = { box_start.x + section_len, top_offset - 2 * knob_radius - circle_radius }; // right bot
     float circle_area = circle_radius * 2.0f * 1.1f;
@@ -118,7 +118,7 @@ int main(int, char *[]) {
     for (float j = 0.0f; j < circles_h; j += 1.0f) {
         for (float i = - circles_h + j; i < circles_w + circles_h - j; i += 1.0f) {
             ++num_circles;
-            auto item = create_sim_object(
+            auto item = create_sim_circle(
                 {box_start + glm::vec2{ i * circle_area, j * circle_area }},
                 {},
                 circle_radius,
@@ -155,12 +155,12 @@ int main(int, char *[]) {
         for (const auto& item : frame_objects) {
             size_t section_idx = 0;
             for (; section_idx < section_predictions.size(); ++section_idx) {
-                if (section_predictions[section_idx].contains(item.m_phys_item.id)) {
+                if (section_predictions[section_idx].contains(item.id)) {
                     break;
                 }
             }
             auto color = v.some_color(section_idx);
-            v.draw_circle(item.m_phys_item.position, item.m_collider.m_radius, color);
+            v.draw_circle(item.position, item.radius, color);
             //v.draw_line(item.m_phys_item.position, item.m_phys_item.position+item.m_phys_item.speed * 0.1f * item.m_phys_item.mass, {200, 200, 0, 255});
         }
         v.draw_rectangle({0.0f, 0.0f}, sim.get_simulation_rectangle(), {128, 128, 0, 255});
@@ -172,7 +172,7 @@ int main(int, char *[]) {
 
         glm::vec2 total_impulse(0.0f, 0.0f);
         for (const auto& obj : frame_objects) {
-            total_impulse += obj.m_phys_item.mass * obj.m_phys_item.speed;
+            total_impulse += obj.mass * obj.speed;
         }
         glm::vec2 impulse_start{1200.0f, 300.0f};
         v.draw_line(impulse_start, impulse_start + total_impulse * 0.0001f, {255, 255, 0, 255});
@@ -195,8 +195,8 @@ int main(int, char *[]) {
         std::ofstream ofs(prediction_path);
         auto iter = std::ostream_iterator<std::string>(ofs, "\n");
         auto thing = std::views::all(frame_objects)
-            | std::views::filter([&](const auto& obj) { return (obj.m_phys_item.position.x <= limit) & (obj.m_phys_item.position.x > last_limit); })
-            | std::views::transform([](const auto& obj) { return std::to_string(obj.m_phys_item.id); });
+            | std::views::filter([&](const auto& obj) { return (obj.position.x <= limit) & (obj.position.x > last_limit); })
+            | std::views::transform([](const auto& obj) { return std::to_string(obj.id); });
         std::copy(thing.begin(), thing.end(), iter);
         last_limit = limit;
     }

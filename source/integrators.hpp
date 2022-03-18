@@ -14,9 +14,9 @@
 namespace Physics {
 
     template<typename T>
-    concept Integrator = requires(T integrator, Force f, float dt, PhysicsItem item) {
+    concept Integrator = requires(T integrator, Force f, float dt, SimulationCircle item) {
         { integrator.add_force(f) };
-        { integrator.update(dt, item) } -> std::same_as<PhysicsItem>; 
+        { integrator.update(dt, item) } -> std::same_as<SimulationCircle>; 
     };
 
     class BasicIntegrator {
@@ -32,7 +32,7 @@ namespace Physics {
 
     class ForwardEuler : public BasicIntegrator{
     public:
-        PhysicsItem update(float dt, const PhysicsItem& item) {
+        SimulationCircle update(float dt, const SimulationCircle& item) {
             //TODO: test for speed (use of execution policies)
             //TODO: rewrite with ranges
             //TODO: respect filtering
@@ -56,11 +56,11 @@ namespace Physics {
             glm::vec2 new_speed = item.speed + dt * acceleration;
 
             return {
-                item.mass,
-                new_position,
-                new_speed,
-                item.is_static,
-                item.id
+                .position = new_position,
+                .speed = new_speed,
+                .mass = item.mass,
+                .radius = item.radius,
+                .id = item.id
             };   
         }
     };

@@ -10,6 +10,7 @@
 #include <spdlog/spdlog.h>
 
 #include "visualizer.hpp"
+#include "physics_item.hpp"
 
 
 namespace Physics {
@@ -58,7 +59,7 @@ namespace Physics {
     public:
         bool is_colliding_x(float border) const; 
         bool is_colliding_y(float border) const; 
-        bool is_colliding(const CircleCollider& other) const;
+        bool is_colliding(const SimulationCircle& other) const;
         bool is_colliding(glm::vec2 ray_start, glm::vec2 ray_point) const;
 
     public:
@@ -68,8 +69,8 @@ namespace Physics {
     //TODO: return all collision data in one struct to reduce recalculation?
     struct StaticCollider {
     public:
-        virtual bool is_colliding(const CircleCollider& circle) const = 0;
-        virtual glm::vec2 collision_point(const CircleCollider& circle) const = 0;
+        virtual bool is_colliding(const SimulationCircle& circle) const = 0;
+        virtual glm::vec2 collision_point(const SimulationCircle& circle) const = 0;
         virtual float distance(glm::vec2 point) const = 0;
         virtual void visualize(Visualizer& vis) const = 0;
         virtual ~StaticCollider() = default;
@@ -79,15 +80,15 @@ namespace Physics {
     public:
         StaticSegmentCollider(glm::vec2 start, glm::vec2 end);
 
-        bool is_colliding(const CircleCollider& circle) const override;
+        bool is_colliding(const SimulationCircle& circle) const override;
 
         //TODO implement or remove
         float distance(glm::vec2) const override;
-        glm::vec2 collision_point(const CircleCollider& circle) const override;
+        glm::vec2 collision_point(const SimulationCircle& circle) const override;
         void visualize(Visualizer& vis) const override;
     
     private:
-        std::tuple<float, float, bool> get_ts(const CircleCollider& circle) const;
+        std::tuple<float, float, bool> get_ts(const SimulationCircle& circle) const;
     
         glm::vec2 m_start;
         glm::vec2 m_end;
@@ -98,9 +99,9 @@ namespace Physics {
     public:
         StaticCircleCollider(glm::vec2 position, float radius);
         
-        bool is_colliding(const CircleCollider& circle) const override;
+        bool is_colliding(const SimulationCircle& circle) const override;
         float distance(glm::vec2 point) const override;
-        glm::vec2 collision_point(const CircleCollider& circle) const override;
+        glm::vec2 collision_point(const SimulationCircle& circle) const override;
         void visualize(Visualizer& vis) const override;
 
     private:

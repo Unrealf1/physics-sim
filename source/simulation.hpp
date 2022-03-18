@@ -24,7 +24,7 @@ namespace Physics {
             : m_simulation_rectangle(simulation_rectangle)
             , m_collision_detector(simulation_rectangle) {}
 
-        using objects_t = std::vector<SimulationObject>;
+        using objects_t = std::vector<SimulationCircle>;
 
         objects_t get_objects() const {
             std::lock_guard lg(m_objects_lock);
@@ -35,7 +35,7 @@ namespace Physics {
             return m_static_colliders;
         }
 
-        void add_circle(const SimulationObject& obj) {
+        void add_circle(const SimulationCircle& obj) {
             get_last_buffer().push_back(obj);
         }
 
@@ -59,29 +59,29 @@ namespace Physics {
                 std::begin(last_buffer), std::end(last_buffer),
                 std::begin(collisions),
                 std::begin(active_buffer),
-                [dt, this](SimulationObject copy, const Collision& collision) -> SimulationObject {
+                [dt, this](SimulationCircle copy, const Collision& collision) -> SimulationCircle {
                     // process collisions
-                    for (const SimulationObject& collided_obj : collision.objects) {
+                    for (const SimulationCircle& collided_obj : collision.objects) {
                         //TODO: calc integrator step once
                         //for every item beforehand
                         auto is_unnecessary = [&]{
-                            auto new_item = m_integrator.update(dt, copy.m_phys_item);
-                            auto new_item2 = m_integrator.update(dt, collided_obj.m_phys_item);
-                            auto cur_dist = glm::distance(copy.m_phys_item.position, collided_obj.m_phys_item.position);
+                            auto new_item = m_integrator.update(dt, copy);
+                            auto new_item2 = m_integrator.update(dt, collided_obj);
+                            auto cur_dist = glm::distance(copy.position, collided_obj.position);
                             auto new_dist = glm::distance(new_item.position, new_item2.position);
                             return new_dist > cur_dist;
                         };
                         if (is_unnecessary()) {
                             continue;
                         }            
-                        auto m1 = copy.m_phys_item.mass;
-                        auto m2 = collided_obj.m_phys_item.mass;
+                        auto m1 = copy.mass;
+                        auto m2 = collided_obj.mass;
                         float dm = m1 - m2;
                         float sm = m1 + m2;
 
-                        auto& v1 = copy.m_phys_item.speed;
-                        auto& v2 = collided_obj.m_phys_item.speed;
-                        auto dp = copy.m_phys_item.position - collided_obj.m_phys_item.position;
+                        auto& v1 = copy.speed;
+                        auto& v2 = collided_obj.speed;
+                        auto dp = copy.position - collided_obj.position;
                         glm::vec2 dp_rot = { -dp.y, dp.x };
                         auto touch_vec = glm::normalize(dp_rot);
 
@@ -95,8 +95,9 @@ namespace Physics {
 
                         auto changed_v = (2 * m2 * other_2 + other_1 * dm) / sm;
 
-                        copy.m_phys_item.speed = proj_1 + changed_v;
-                        if (copy.m_phys_item.speed != copy.m_phys_item.speed) {
+                        copy.speed = proj_1 + changed_v;
+                        //TODO: wrap in debug pragma
+                        if (copy.speed != copy.speed) {
                             spdlog::warn("m1: {}, m2: {}, proj_len_1: {}, proj_len_2: {}, dp: {}, {}", m1, m2, proj_len_1, proj_len_2, dp.x, dp.y);
                         }
                     }
@@ -104,32 +105,31 @@ namespace Physics {
                     for (const StaticCollider* st_ptr : collision.statics) {
                         const auto& st = *st_ptr;
                         auto is_unnecessary = [&]{
-                            auto new_item = m_integrator.update(dt / 20.0f, copy.m_phys_item);
-                            auto cur_dist = st.distance(copy.m_phys_item.position);
+                            auto new_item = m_integrator.update(dt / 20.0f, copy);
+                            auto cur_dist = st.distance(copy.position);
                             auto new_dist = st.distance(new_item.position);
                             return new_dist > cur_dist;
                         };
                         if (is_unnecessary()) {
                             continue;
                         }
-                        auto collision_point = st.collision_point(copy.m_collider);
-                        auto change_direction = glm::normalize(collision_point - copy.m_collider.m_position);
-                        auto proj_changed_len = glm::dot(change_direction, copy.m_phys_item.speed);
+                        auto collision_point = st.collision_point(copy);
+                        auto change_direction = glm::normalize(collision_point - copy.position);
+                        auto proj_changed_len = glm::dot(change_direction, copy.speed);
                         auto proj_changed = change_direction * proj_changed_len;
-                        copy.m_phys_item.speed -= proj_changed * 2.0f;
+                        copy.speed -= proj_changed * 2.0f;
                     }
 
-                    if ((copy.m_collider.is_colliding_x(m_simulation_rectangle.x) & (copy.m_phys_item.speed.x > 0.0f))
-                            | (copy.m_collider.is_colliding_x(0.0f) & (copy.m_phys_item.speed.x < 0.0f))) {
-                        copy.m_phys_item.speed.x *= -1;   
+                    if ((copy.is_colliding_x(m_simulation_rectangle.x) & (copy.speed.x > 0.0f))
+                            | (copy.is_colliding_x(0.0f) & (copy.speed.x < 0.0f))) {
+                        copy.speed.x *= -1;   
                     }
-                    if ((copy.m_collider.is_colliding_y(m_simulation_rectangle.y) & (copy.m_phys_item.speed.y > 0.0f))
-                            | (copy.m_collider.is_colliding_y(0.0f) & (copy.m_phys_item.speed.y < 0.0f))) {
-                        copy.m_phys_item.speed.y *= -1;   
+                    if ((copy.is_colliding_y(m_simulation_rectangle.y) & (copy.speed.y > 0.0f))
+                            | (copy.is_colliding_y(0.0f) & (copy.speed.y < 0.0f))) {
+                        copy.speed.y *= -1;   
                     }
 
-                    copy.m_phys_item = m_integrator.update(dt, copy.m_phys_item);
-                    copy.m_collider.m_position = copy.m_phys_item.position;
+                    copy = m_integrator.update(dt, copy);
                     return copy;                  
                 }
                 

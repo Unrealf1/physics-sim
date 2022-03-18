@@ -12,7 +12,7 @@
 
 
 namespace Physics {
-    using collision_objects_t = std::vector<std::reference_wrapper<const SimulationObject>>;
+    using collision_objects_t = std::vector<std::reference_wrapper<const SimulationCircle>>;
 
     struct Collision {
         collision_objects_t objects;
@@ -20,13 +20,13 @@ namespace Physics {
     };
 
     template<typename T>
-    concept CollisionDetector = requires(T detector, const std::vector<SimulationObject>& objects, const std::vector<std::unique_ptr<StaticCollider>>& statics) {
+    concept CollisionDetector = requires(T detector, const std::vector<SimulationCircle>& objects, const std::vector<std::unique_ptr<StaticCollider>>& statics) {
         { detector.detect_collisions(objects, statics) } -> std::same_as<std::vector<Collision>>;
     };
 
     struct SimpleCollisionDetector {
         std::vector<Collision> detect_collisions(
-                const std::vector<SimulationObject>& objects, 
+                const std::vector<SimulationCircle>& objects, 
                 const std::vector<std::unique_ptr<StaticCollider>>& statics
         ) const {
             std::vector<Collision> result(objects.size());
@@ -38,7 +38,7 @@ namespace Physics {
             for (size_t i = 0; i < objects.size(); ++i) {
                 // Detect object collisions
                 for (size_t j = i + 1; j < objects.size(); ++j) {
-                    if (objects[i].m_collider.is_colliding(objects[j].m_collider)) {
+                    if (objects[i].is_colliding(objects[j])) {
                         result[i].objects.emplace_back(objects[j]);
                         result[j].objects.emplace_back(objects[i]);
                     } 
@@ -48,7 +48,7 @@ namespace Physics {
             for (size_t i = 0; i < objects.size(); ++i) {
                 // Detect statics collisions
                 for (const auto& st : statics) {
-                    if (st->is_colliding(objects[i].m_collider)) {
+                    if (st->is_colliding(objects[i])) {
                         result[i].statics.push_back(st.get());
                     }   
                 }
@@ -76,7 +76,7 @@ namespace Physics {
 
         }
         
-        void update_bounds(const std::vector<SimulationObject>& objects) {
+        void update_bounds(const std::vector<SimulationCircle>& objects) {
             /*m_max_x = m_simulation_rectangle.x;
             m_min_x = 0.0f;
             m_max_y = m_simulation_rectangle.y;
@@ -85,8 +85,8 @@ namespace Physics {
             m_xs.clear();
             m_ys.clear();
             for (const auto& obj : objects) {
-                m_xs.push_back(obj.m_collider.m_position.x);
-                m_ys.push_back(obj.m_collider.m_position.y);
+                m_xs.push_back(obj.position.x);
+                m_ys.push_back(obj.position.y);
             }
 
             m_max_x = *std::max_element(m_xs.begin(), m_xs.end());
@@ -95,7 +95,7 @@ namespace Physics {
             m_min_y = *std::min_element(m_ys.begin(), m_ys.end());
         }
 
-        void update_buckets(const std::vector<SimulationObject>& objects) {
+        void update_buckets(const std::vector<SimulationCircle>& objects) {
             //TODO: something more intellectual than constant number of uniform buckets?
             m_buckets.resize(num_dim_buckets * num_dim_buckets);
             for (auto& bucket : m_buckets) {
@@ -111,11 +111,11 @@ namespace Physics {
                 for (size_t idx = 0; idx < num_dim_buckets * num_dim_buckets; ++idx) {
                     // TODO: for now assume, that bucket is not smaller than circle. may be bad.
                     glm::vec2 points_to_check[] = {
-                        obj.m_collider.m_position, 
-                        obj.m_collider.m_position + glm::vec2(0.0f, obj.m_collider.m_radius),
-                        obj.m_collider.m_position + glm::vec2(0.0f, -obj.m_collider.m_radius),
-                        obj.m_collider.m_position + glm::vec2(obj.m_collider.m_radius, 0.0f),
-                        obj.m_collider.m_position + glm::vec2(-obj.m_collider.m_radius, 0.0f)
+                        obj.position, 
+                        obj.position + glm::vec2(0.0f, obj.radius),
+                        obj.position + glm::vec2(0.0f, -obj.radius),
+                        obj.position + glm::vec2(obj.radius, 0.0f),
+                        obj.position + glm::vec2(-obj.radius, 0.0f)
                     };
                     auto check_bucket_collision = [&](const glm::vec2 point) -> bool {
                         // && is faster than &
@@ -143,7 +143,7 @@ namespace Physics {
 
         inline static const auto processor_count = std::thread::hardware_concurrency();
         std::vector<Collision> detect_collisions(
-                const std::vector<SimulationObject>& objects, 
+                const std::vector<SimulationCircle>& objects, 
                 const std::vector<std::unique_ptr<StaticCollider>>& statics
         ) {
             
@@ -192,7 +192,7 @@ namespace Physics {
                                 locks[index].lock();
                             }
 #endif
-                            if (objects[index].m_collider.is_colliding(objects[other_index].m_collider)) {
+                            if (objects[index].is_colliding(objects[other_index])) {
                                 result[index].objects.emplace_back(objects[other_index]);
                                 result[other_index].objects.emplace_back(objects[index]);
                             }
@@ -223,7 +223,7 @@ namespace Physics {
             for (size_t i = 0; i < objects.size(); ++i) {
                 // Detect statics collisions
                 for (const auto& st : statics) {
-                    if (st->is_colliding(objects[i].m_collider)) {
+                    if (st->is_colliding(objects[i])) {
                         result[i].statics.push_back(st.get());
                     }   
                 }
@@ -231,7 +231,7 @@ namespace Physics {
 
             //TODO: is this necessary and/or worth it?
             for (auto& res : result) {
-                auto ref_to_id = [](const auto& item) { return item.get().m_phys_item.id; };
+                auto ref_to_id = [](const auto& item) { return item.get().id; };
                 std::ranges::sort(res.objects, {}, ref_to_id);
                 auto duplicates = std::ranges::unique(res.objects, {}, ref_to_id);
                 res.objects.erase(duplicates.begin(), duplicates.end());
@@ -242,7 +242,7 @@ namespace Physics {
     };
 
     struct EmptyCollisionDetector {
-        static std::vector<Collision> detect_collisions(const std::vector<SimulationObject>& objects) {
+        static std::vector<Collision> detect_collisions(const std::vector<SimulationCircle>& objects) {
             std::vector<Collision> result(objects.size());
             return result;
         } 
