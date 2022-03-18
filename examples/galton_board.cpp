@@ -50,9 +50,22 @@ int main(int, char *[]) {
     uint32_t sim_width = 1000;
     uint32_t sim_height = 900;
 
-    //Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<9>> sim({sim_width, sim_height});
-    Physics::Simulation<Physics::ForwardEuler, Physics::OnlyStaticCollisionDetector> sim({sim_width, sim_height});
+    Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<3>> sim({sim_width, sim_height});
+    //Physics::Simulation<Physics::ForwardEuler, Physics::SimpleCollisionDetector> sim({sim_width, sim_height});
+    //Physics::Simulation<Physics::ForwardEuler, Physics::OnlyStaticCollisionDetector> sim({sim_width, sim_height});
     sim.add_force(Physics::earth_gravitation());
+    sim.add_force(Physics::earth_gravitation());
+    sim.add_force(Physics::earth_gravitation());
+    sim.add_force(Physics::earth_gravitation());
+    sim.add_force(Physics::earth_gravitation());
+    sim.add_force(Physics::earth_gravitation());
+    sim.add_force(Physics::earth_gravitation());
+    sim.add_force(Physics::earth_gravitation());
+    sim.add_force(Physics::earth_gravitation());
+    sim.add_force(Physics::earth_gravitation());
+    sim.add_force(Physics::earth_gravitation());
+    sim.add_force(Physics::earth_gravitation());
+
     sim.add_force(Physics::damping(0.17f));
 
     float top_offset = 300.0f;
@@ -109,7 +122,8 @@ int main(int, char *[]) {
     }
 
     // Add falling items
-    float circle_radius = knob_radius / 5.0f;
+    size_t special_id = 53;
+    float circle_radius = knob_radius / 1.9f;
     glm::vec2 box_start = { float(sim_width) / 2.0f - section_len / 2.0f, circle_radius }; // left top
     glm::vec2 box_end = { box_start.x + section_len, top_offset - 2 * knob_radius - circle_radius }; // right bot
     float circle_area = circle_radius * 2.0f * 1.1f;
@@ -125,6 +139,11 @@ int main(int, char *[]) {
                 circle_radius,
                 1.0f
             );
+            if (item.m_phys_item.id == special_id) {
+                item.m_phys_item.mass /= 50000;
+                item.m_collider.m_radius *= 5.5f;
+                item.m_phys_item.speed = glm::vec2{500.0f, 0.0f};
+            }
             sim.add_circle(item);
         }
     }
@@ -140,10 +159,11 @@ int main(int, char *[]) {
 
     Visualizer v(w);
     v.set_simulation_rectangle(sim.get_simulation_rectangle());
-    std::jthread phys_thread(make_physics_thread(&sim, { .physics_step = 0.005f, .fps_limit = 0.0f, .start_delay = 200ms, .measure_period = 50 } ));
+    std::jthread phys_thread(make_physics_thread(&sim, { .physics_step = 0.001f, .fps_limit = 0.0f, .start_delay = 200ms, .measure_period = 50 } ));
 
     bool quit = false;
     SDL_Event event;
+    auto start_time = std::chrono::steady_clock::now();
     while(!quit) {
         while(SDL_PollEvent(&event)) {
             switch(event.type) {
@@ -161,6 +181,11 @@ int main(int, char *[]) {
                 }
             }
             auto color = v.some_color(section_idx);
+            if (item.m_phys_item.id == special_id) {
+                auto duration = std::chrono::steady_clock::now() - start_time;
+                float t = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+                color = color_t{(sinf(t / 1000.0f) + 1.0f) / 2.0f * 128.0f + 127.0f, (cosf(t / 1000.0f) + 1.0f) / 2.0f * 255.0f, sinf(t * t / 10000.0f), 255};
+            }
             v.draw_circle(item.m_phys_item.position, item.m_collider.m_radius, color);
             //v.draw_line(item.m_phys_item.position, item.m_phys_item.position+item.m_phys_item.speed * 0.1f * item.m_phys_item.mass, {200, 200, 0, 255});
         }

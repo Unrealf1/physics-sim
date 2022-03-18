@@ -25,6 +25,7 @@ namespace Physics {
     };
 
     struct SimpleCollisionDetector {
+        SimpleCollisionDetector(glm::vec2) {}
         std::vector<Collision> detect_collisions(
                 const std::vector<SimulationObject>& objects, 
                 const std::vector<std::unique_ptr<StaticCollider>>& statics
