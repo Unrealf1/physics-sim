@@ -242,10 +242,35 @@ namespace Physics {
     };
 
     struct EmptyCollisionDetector {
-        static std::vector<Collision> detect_collisions(const std::vector<SimulationObject>& objects) {
+        EmptyCollisionDetector(glm::vec2) {}
+        std::vector<Collision> detect_collisions(
+                const std::vector<SimulationObject>& objects, 
+                const std::vector<std::unique_ptr<StaticCollider>>& statics
+        ) {
+            
             std::vector<Collision> result(objects.size());
             return result;
-        } 
+        }
+    };
+
+    struct OnlyStaticCollisionDetector {
+        OnlyStaticCollisionDetector(glm::vec2) {}
+        std::vector<Collision> detect_collisions(
+                const std::vector<SimulationObject>& objects, 
+                const std::vector<std::unique_ptr<StaticCollider>>& statics
+        ) {
+            
+            std::vector<Collision> result(objects.size());
+            for (size_t i = 0; i < objects.size(); ++i) {
+                // Detect statics collisions
+                for (const auto& st : statics) {
+                    if (st->is_colliding(objects[i].m_collider)) {
+                        result[i].statics.push_back(st.get());
+                    }   
+                }
+            }
+            return result;
+        }
     };
 }
 

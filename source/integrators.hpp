@@ -59,7 +59,6 @@ namespace Physics {
                 item.mass,
                 new_position,
                 new_speed,
-                item.is_static,
                 item.id
             };   
         }
