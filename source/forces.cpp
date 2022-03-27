@@ -1,7 +1,5 @@
 #include "forces.hpp"
 
-#include <spdlog/spdlog.h>
-
 
 namespace Physics { namespace Forces {
     //TODO: attach spring to an arbitrary point in the item. (need Point ref class...)
@@ -14,8 +12,7 @@ namespace Physics { namespace Forces {
             const PointReference& first_point,
             const PointReference& second_point
     ) {
-        spdlog::info("creating spring between objects {} and {}", first, second);
-        auto calc = [k, initial_length, &first, &second, &first_point, &second_point](const PhysicsItem& item) {
+        auto calc = [k, initial_length, first, second, &first_point, &second_point](const PhysicsItem& item) {
             auto point1 = first_point.get();
             auto point2 = second_point.get();
             auto diff = point1 - point2;
@@ -24,7 +21,6 @@ namespace Physics { namespace Forces {
             if (item.id == second) {
                 power *= -1;
             }
-            spdlog::info("power: {}; direction: {},{}", power, diff.x, diff.y);
             return glm::normalize(diff) * power;                
         };
         auto filt = [=](const PhysicsItem& item) {

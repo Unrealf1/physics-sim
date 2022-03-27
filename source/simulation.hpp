@@ -87,6 +87,8 @@ namespace Physics {
         ObjectReference add_circle(const SimulationObject& obj) {
             auto& last_buffer = get_last_buffer();
             last_buffer.push_back(obj);
+            // so initial setup will work
+            //get_active_buffer().push_back(obj);
             return { *this, last_buffer.size() - 1 };
         }
 
@@ -102,7 +104,9 @@ namespace Physics {
             const auto& last_buffer = get_last_buffer();
             auto& active_buffer = get_active_buffer();
             active_buffer.clear();
-            active_buffer.resize(last_buffer.size());
+
+            // not default phys_item construction so new item ids are not taken
+            active_buffer.resize(last_buffer.size(), {{}, {0.0f, glm::vec2{0.0f, 0.0f}, glm::vec2{0.0f, 0.0f}, size_t(-1)}});
             
             const auto collisions = m_collision_detector.detect_collisions(last_buffer, m_static_colliders);
             //const auto integrated = last_buffer 

@@ -49,7 +49,7 @@ int main(int, char *[]) {
 
     auto& first_point = sim.get_point_ref(first_ref);
     auto& second_point = sim.get_point_ref(second_ref);
-    auto spring = Physics::Forces::spring(5.5, 100.0, 
+    auto spring = Physics::Forces::spring(3.5, 500.0, 
             first_ref.get().m_phys_item.id, second_ref.get().m_phys_item.id,
             first_point, second_point        
     );

@@ -22,6 +22,7 @@ namespace Physics {
 
     struct PointReference {
         virtual glm::vec2 get() const = 0;
+        virtual ~PointReference() = default;
     };
 
     struct FixedPointReference : public PointReference {
