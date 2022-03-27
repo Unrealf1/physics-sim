@@ -47,10 +47,13 @@ int main(int, char *[]) {
 
     sim.add_static_collider(std::make_unique<Physics::StaticSegmentCollider>(glm::vec2{500.0f, 500.0f}, glm::vec2{700.0f, 700.0f}));
 
-    auto& first_point = sim.get_point_ref(first_ref);
-    auto& second_point = sim.get_point_ref(second_ref);
+    auto ref1 = sim.get_object_ref(0);
+    auto ref2 = sim.get_object_ref(1);
+
+    auto& first_point = sim.get_point_ref(ref1);
+    auto& second_point = sim.get_point_ref(ref2);
     auto spring = Physics::Forces::spring(3.5, 500.0, 
-            first_ref.get().m_phys_item.id, second_ref.get().m_phys_item.id,
+            ref1.get().m_phys_item.id, ref2.get().m_phys_item.id,
             first_point, second_point        
     );
     sim.add_force(spring);

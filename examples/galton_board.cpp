@@ -138,6 +138,15 @@ int main(int, char *[]) {
         std::make_unique<Physics::StaticSegmentCollider>(glm::vec2{sim.get_simulation_rectangle().x, 0.0f}, box_end)
     );
 
+    auto ref1 = sim.get_object_ref(100);
+    auto ref2 = sim.get_object_ref(5000);
+
+    auto& p1 = sim.get_point_ref(ref1);
+    auto& p2 = sim.get_point_ref(ref2);
+
+    auto spring = Physics::Forces::spring(5, 100, ref1.get().m_phys_item.id, ref2.get().m_phys_item.id, p1, p2);
+    sim.add_force(spring);
+
     Visualizer v(w);
     v.set_simulation_rectangle(sim.get_simulation_rectangle());
     std::jthread phys_thread(make_physics_thread(&sim, { .physics_step = 0.005f, .fps_limit = 0.0f, .start_delay = 200ms, .measure_period = 50 } ));
@@ -153,6 +162,7 @@ int main(int, char *[]) {
             }
         }
         auto frame_objects = sim.get_objects();
+        v.draw_line(p1.get(), p2.get(), {255, 0, 0, 255});
         for (const auto& item : frame_objects) {
             size_t section_idx = 0;
             for (; section_idx < section_predictions.size(); ++section_idx) {
@@ -161,6 +171,9 @@ int main(int, char *[]) {
                 }
             }
             auto color = v.some_color(section_idx);
+            if (item.m_phys_item.id == ref1.get().m_phys_item.id || item.m_phys_item.id == ref2.get().m_phys_item.id) {
+                color = {255, 255, 255, 255};
+            }
             v.draw_circle(item.m_phys_item.position, item.m_collider.m_radius, color);
             //v.draw_line(item.m_phys_item.position, item.m_phys_item.position+item.m_phys_item.speed * 0.1f * item.m_phys_item.mass, {200, 200, 0, 255});
         }

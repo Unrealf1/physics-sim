@@ -68,7 +68,7 @@ namespace Physics {
             if (it == objects.end()) {
                 throw std::out_of_range("Simulation does not have object with id " + std::to_string(id));
             }
-            return { *this, std::distance(it, objects.begin()) };
+            return { *this, std::distance(objects.begin(), it) };
         }
 
         const PointReference& get_point_ref(const ObjectReference& obj_ref, glm::vec2 offset = {0.0f, 0.0f}) {
