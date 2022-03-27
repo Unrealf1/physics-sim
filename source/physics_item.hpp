@@ -20,6 +20,16 @@ namespace Physics {
         item_id_t id = generate_item_id();
     };
 
-}
+    struct PointReference {
+        virtual glm::vec2 get() const = 0;
+    };
 
+    struct FixedPointReference : public PointReference {
+        glm::vec2 get() const override {
+            return m_point;
+        }
+
+        glm::vec2 m_point;
+    };
+}
 

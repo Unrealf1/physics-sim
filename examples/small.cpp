@@ -28,14 +28,14 @@ int main(int, char *[]) {
     Window w(p);
     
     Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<2>> sim({920, 680});
-    sim.add_force(Physics::earth_gravitation());
+    sim.add_force(Physics::Forces::earth_gravitation());
     Physics::CircleCollider collider = {{{100.0f + 10, 10.0f+10}}, 15.0f};
     Physics::PhysicsItem item = {1.0f, collider.m_position, {80.0f, 0.0f}};
-    sim.add_circle({collider, item});
+    auto second_ref = sim.add_circle({collider, item});
 
     collider = {{{100.0f + 300.0f, 12.0f+10}}, 15.0f};
     item = {1.0f, collider.m_position, {-80.0f, 0.0f}};
-    sim.add_circle({collider, item});
+    auto first_ref = sim.add_circle({collider, item});
 
     collider = {{{100.0f + 300.0f, 12.0f+50}}, 7.5f};
     item = {0.5f, collider.m_position, {50.0f, -10.0f}};
@@ -46,6 +46,14 @@ int main(int, char *[]) {
     sim.add_circle({collider, item});
 
     sim.add_static_collider(std::make_unique<Physics::StaticSegmentCollider>(glm::vec2{500.0f, 500.0f}, glm::vec2{700.0f, 700.0f}));
+
+    auto& first_point = sim.get_point_ref(first_ref);
+    auto& second_point = sim.get_point_ref(second_ref);
+    auto spring = Physics::Forces::spring(5.5, 100.0, 
+            first_ref.get().m_phys_item.id, second_ref.get().m_phys_item.id,
+            first_point, second_point        
+    );
+    sim.add_force(spring);
     
     Visualizer v(w);
     v.set_simulation_rectangle(sim.get_simulation_rectangle());
@@ -72,6 +80,8 @@ int main(int, char *[]) {
             st.visualize(v); 
         }
         v.draw_rectangle({0.0f, 0.0f}, sim.get_simulation_rectangle(), {128, 128, 0, 255});
+
+        v.draw_line(first_point.get(), second_point.get(), {255, 0, 0, 255});
 
         v.finish_frame();
         std::this_thread::sleep_for(10ms);

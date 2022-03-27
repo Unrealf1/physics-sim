@@ -50,10 +50,10 @@ int main(int, char *[]) {
     uint32_t sim_width = 1000;
     uint32_t sim_height = 900;
 
-    //Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<9>> sim({sim_width, sim_height});
-    Physics::Simulation<Physics::ForwardEuler, Physics::OnlyStaticCollisionDetector> sim({sim_width, sim_height});
-    sim.add_force(Physics::earth_gravitation());
-    sim.add_force(Physics::damping(0.17f));
+    Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<9>> sim({sim_width, sim_height});
+    //Physics::Simulation<Physics::ForwardEuler, Physics::OnlyStaticCollisionDetector> sim({sim_width, sim_height});
+    sim.add_force(Physics::Forces::earth_gravitation());
+    sim.add_force(Physics::Forces::damping(0.17f));
 
     float top_offset = 300.0f;
     float bottom_offset = 200.0f;

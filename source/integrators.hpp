@@ -33,24 +33,16 @@ namespace Physics {
     class ForwardEuler : public BasicIntegrator{
     public:
         PhysicsItem update(float dt, const PhysicsItem& item) {
-            //TODO: test for speed (use of execution policies)
-            //TODO: rewrite with ranges
-            //TODO: respect filtering
+            //TODO: test for speed (use of execution policies or threads)
             assert(("Mass is sane", item.mass > 0));
-            std::vector<glm::vec2> force_vectors;
-            force_vectors.reserve(m_forces.size());
-            std::transform(
-                //std::execution::par_unseq, 
-                m_forces.begin(), m_forces.end(),
-                std::back_inserter(force_vectors),
-                [&item](Force& f) -> glm::vec2 { return f.calculate(item); }
-            );
-
-            glm::vec2 total_force = std::reduce(
-                std::execution::par_unseq,
-                std::cbegin(force_vectors),
-                std::cend(force_vectors)
-            );
+            
+            auto is_force_affecting = [&item](Force& force){ return force.is_affecting(item); };
+            auto force_to_vec = [&item](Force& force) -> glm::vec2 { return force.calculate(item); };
+            auto vecs = m_forces 
+                | std::views::filter(is_force_affecting) 
+                | std::views::transform(force_to_vec);
+            glm::vec2 total_force = std::reduce(vecs.begin(), vecs.end());
+            
             glm::vec2 acceleration = total_force / item.mass;
             glm::vec2 new_position = item.position + dt * item.speed;
             glm::vec2 new_speed = item.speed + dt * acceleration;

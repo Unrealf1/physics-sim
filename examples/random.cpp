@@ -28,7 +28,7 @@ int main(int, char *[]) {
     Window w(p);
     
     Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<2>> sim({920, 680});
-    sim.add_force(Physics::earth_gravitation());
+    sim.add_force(Physics::Forces::earth_gravitation());
     
     for (int i = 0; i < 30; ++i) {
         for (int j = 0; j < 30; ++j) {

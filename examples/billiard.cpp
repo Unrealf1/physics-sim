@@ -30,7 +30,7 @@ int main(int, char *[]) {
     Window w(p);
     
     Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<3>> sim({500, 1000});
-    sim.add_force(Physics::damping(0.3f));
+    sim.add_force(Physics::Forces::damping(0.3f));
     
     uint32_t num_circles_in_side = 5;
     float circle_radius = 15.0f;

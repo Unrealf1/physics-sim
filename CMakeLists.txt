@@ -32,7 +32,7 @@ enable_sanitizers(project_options)
 file(GLOB_RECURSE SOURCES . source/*.cpp)
 add_library(lib STATIC ${SOURCES})
 target_include_directories(lib PUBLIC source)
-target_link_libraries(lib PUBLIC project_options project_warnings)
+target_link_libraries(lib PRIVATE project_options project_warnings)
 target_link_libraries(lib PUBLIC SDL2 SDL2::SDL2main spdlog glm)
 
 add_executable(small examples/small.cpp)
