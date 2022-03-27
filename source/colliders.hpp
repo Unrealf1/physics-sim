@@ -64,6 +64,17 @@ namespace Physics {
     public:
         float m_radius;
     };
+    struct PolygonCollider : public BasicMovable {
+    public:
+        bool is_colliding_x(float border) const; 
+        bool is_colliding_y(float border) const; 
+        //bool is_colliding(const CircleCollider& other) const;
+        bool is_colliding(const PolygonCollider& other) const;
+        bool is_colliding(glm::vec2 ray_start, glm::vec2 ray_point) const;
+
+    public:
+        std::vector<glm::vec2> m_vertices;
+    };
 
     //TODO: return all collision data in one struct to reduce recalculation?
     struct StaticCollider {
