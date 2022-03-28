@@ -9,5 +9,10 @@ namespace Physics {
         CircleCollider m_collider;
         PhysicsItem m_phys_item;
     };
+
+    struct SimulationPolygonalObject {
+        PolygonCollider m_collider;
+        PhysicsItem m_phys_item;
+    };
 }
 

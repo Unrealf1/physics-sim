@@ -52,7 +52,7 @@ int main(int, char *[]) {
 
     auto& first_point = sim.get_point_ref(ref1);
     auto& second_point = sim.get_point_ref(ref2);
-    auto spring = Physics::Forces::spring(3.5, 500.0, 
+    auto spring = Physics::Forces::spring(2.5, 500.0, 
             ref1.get().m_phys_item.id, ref2.get().m_phys_item.id,
             first_point, second_point        
     );
@@ -60,7 +60,7 @@ int main(int, char *[]) {
     
     Visualizer v(w);
     v.set_simulation_rectangle(sim.get_simulation_rectangle());
-    std::jthread phys_thread(make_physics_thread(&sim, { .fps_limit = 100.0f } ));
+    std::jthread phys_thread(make_physics_thread(&sim, { .fps_limit = 500.0f } ));
 
     bool quit = false;
     SDL_Event event;
