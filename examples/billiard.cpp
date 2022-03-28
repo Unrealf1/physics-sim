@@ -19,6 +19,7 @@
 #include "util.hpp"
 
 using namespace std::chrono_literals;
+using sim_obj_t = Physics::SimulationObject<Physics::CircleCollider>;
 
 
 int main(int, char *[]) {
@@ -29,7 +30,7 @@ int main(int, char *[]) {
 
     Window w(p);
     
-    Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<3>> sim({500, 1000});
+    Physics::Simulation<sim_obj_t, Physics::ForwardEuler, Physics::BucketCollisionDetector<sim_obj_t, 3>> sim({500, 1000});
     sim.add_force(Physics::Forces::damping(0.3f));
     
     uint32_t num_circles_in_side = 5;

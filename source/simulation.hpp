@@ -20,7 +20,7 @@
 
 
 namespace Physics {
-    template<Integrator integrator_t, CollisionDetector collision_detector_t>
+    template<typename object_t, Integrator integrator_t, CollisionDetector<object_t> collision_detector_t>
     class Simulation {
     public:
         class ObjectReference {
@@ -28,7 +28,7 @@ namespace Physics {
             ObjectReference(const Simulation& sim, size_t idx)
                 : simulation(sim), index(idx) {}
 
-            const SimulationObject& get() const {
+            const object_t& get() const {
                 return simulation.get_last_buffer()[index];
             }
 
@@ -55,7 +55,7 @@ namespace Physics {
             : m_simulation_rectangle(simulation_rectangle)
             , m_collision_detector(simulation_rectangle) {}
 
-        using objects_t = std::vector<SimulationObject>;
+        using objects_t = std::vector<object_t>;
 
         objects_t get_objects() const {
             std::lock_guard lg(m_objects_lock);
@@ -64,7 +64,7 @@ namespace Physics {
         
         ObjectReference get_object_ref(const item_id_t& id) const {
             const auto& objects = get_last_buffer();
-            auto it = std::find_if(objects.begin(), objects.end(), [&id](const SimulationObject& obj) { return obj.m_phys_item.id == id; });
+            auto it = std::find_if(objects.begin(), objects.end(), [&id](const object_t& obj) { return obj.m_phys_item.id == id; });
             if (it == objects.end()) {
                 throw std::out_of_range("Simulation does not have object with id " + std::to_string(id));
             }
@@ -83,8 +83,9 @@ namespace Physics {
         const auto& get_static_colliders() const {
             return m_static_colliders;
         }
-
-        ObjectReference add_circle(const SimulationObject& obj) {
+        
+        //TODO: rename
+        ObjectReference add_circle(const object_t& obj) {
             auto& last_buffer = get_last_buffer();
             last_buffer.push_back(obj);
             // so initial setup will work
@@ -110,7 +111,7 @@ namespace Physics {
             
             const auto collisions = m_collision_detector.detect_collisions(last_buffer, m_static_colliders);
             //const auto integrated = last_buffer 
-            //    | std::views::transform([this, dt](const SimulationObject& obj) { return m_integrator.update(dt, obj.m_phys_item); } );
+            //    | std::views::transform([this, dt](const object_t& obj) { return m_integrator.update(dt, obj.m_phys_item); } );
             
             std::transform(
                 std::execution::par_unseq,
@@ -119,7 +120,7 @@ namespace Physics {
                 std::begin(active_buffer),
                 // Call to member function instead of direct code in lambda resulted in -5fps.
                 // TODO: investigate
-                [this, dt](const SimulationObject& obj, const Collision& collision) { return process_object(dt, obj, collision); }
+                [this, dt](const object_t& obj, const Collision<object_t>& collision) { return process_object(dt, obj, collision); }
             );
             switch_buffers(); 
         }
@@ -160,9 +161,9 @@ namespace Physics {
             m_active_index = 1 - m_active_index;
         }
 
-        SimulationObject process_object(float dt, SimulationObject copy, const Collision& collision) {
+        object_t process_object(float dt, object_t copy, const Collision<object_t>& collision) {
             // process collisions
-            for (const SimulationObject& collided_obj : collision.objects) {
+            for (const object_t& collided_obj : collision.objects) {
                 //TODO: calc integrator step once
                 //for every item beforehand
                 auto is_unnecessary = [&]{

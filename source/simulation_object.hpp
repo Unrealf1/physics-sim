@@ -5,13 +5,9 @@
 
 
 namespace Physics {
+    template<typename collider_t>
     struct SimulationObject {
-        CircleCollider m_collider;
-        PhysicsItem m_phys_item;
-    };
-
-    struct SimulationPolygonalObject {
-        PolygonCollider m_collider;
+        collider_t m_collider;
         PhysicsItem m_phys_item;
     };
 }

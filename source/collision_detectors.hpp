@@ -12,24 +12,29 @@
 
 
 namespace Physics {
-    using collision_objects_t = std::vector<std::reference_wrapper<const SimulationObject>>;
+    template<typename object_t>
+    using collision_objects_t = std::vector<std::reference_wrapper<const object_t>>;
 
+    template<typename object_t>
     struct Collision {
-        collision_objects_t objects;
+        collision_objects_t<object_t> objects;
         std::vector<StaticCollider*> statics;
     };
 
-    template<typename T>
-    concept CollisionDetector = requires(T detector, const std::vector<SimulationObject>& objects, const std::vector<std::unique_ptr<StaticCollider>>& statics) {
-        { detector.detect_collisions(objects, statics) } -> std::same_as<std::vector<Collision>>;
+    template<typename T, typename object_t>
+    concept CollisionDetector = requires(T detector, const std::vector<object_t>& objects, const std::vector<std::unique_ptr<StaticCollider>>& statics) {
+        { detector.detect_collisions(objects, statics) } -> std::same_as<std::vector<Collision<object_t>>>;
     };
 
+    template<typename object_t>
     struct SimpleCollisionDetector {
-        std::vector<Collision> detect_collisions(
-                const std::vector<SimulationObject>& objects, 
+        SimpleCollisionDetector(glm::vec2) {}
+
+        std::vector<Collision<object_t>> detect_collisions(
+                const std::vector<object_t>& objects, 
                 const std::vector<std::unique_ptr<StaticCollider>>& statics
         ) const {
-            std::vector<Collision> result(objects.size());
+            std::vector<Collision<object_t>> result(objects.size());
             for (auto& col : result) {
                 col.objects.reserve(5);
                 col.statics.reserve(5);
@@ -59,7 +64,7 @@ namespace Physics {
     };
 
 
-    template<uint64_t num_dim_buckets>
+    template<typename object_t, uint64_t num_dim_buckets>
     struct BucketCollisionDetector {
         std::vector<float> m_xs;
         std::vector<float> m_ys;
@@ -76,7 +81,7 @@ namespace Physics {
 
         }
         
-        void update_bounds(const std::vector<SimulationObject>& objects) {
+        void update_bounds(const std::vector<object_t>& objects) {
             /*m_max_x = m_simulation_rectangle.x;
             m_min_x = 0.0f;
             m_max_y = m_simulation_rectangle.y;
@@ -95,7 +100,7 @@ namespace Physics {
             m_min_y = *std::min_element(m_ys.begin(), m_ys.end());
         }
 
-        void update_buckets(const std::vector<SimulationObject>& objects) {
+        void update_buckets(const std::vector<object_t>& objects) {
             //TODO: something more intellectual than constant number of uniform buckets?
             m_buckets.resize(num_dim_buckets * num_dim_buckets);
             for (auto& bucket : m_buckets) {
@@ -142,12 +147,12 @@ namespace Physics {
         }
 
         inline static const auto processor_count = std::thread::hardware_concurrency();
-        std::vector<Collision> detect_collisions(
-                const std::vector<SimulationObject>& objects, 
+        std::vector<Collision<object_t>> detect_collisions(
+                const std::vector<object_t>& objects, 
                 const std::vector<std::unique_ptr<StaticCollider>>& statics
         ) {
             
-            std::vector<Collision> result(objects.size());
+            std::vector<Collision<object_t>> result(objects.size());
             for (auto& col : result) {
                 col.objects.reserve(5);
                 col.statics.reserve(5);
@@ -241,26 +246,28 @@ namespace Physics {
         } 
     };
 
+    template<typename object_t>
     struct EmptyCollisionDetector {
         EmptyCollisionDetector(glm::vec2) {}
-        std::vector<Collision> detect_collisions(
-                const std::vector<SimulationObject>& objects, 
+        std::vector<Collision<object_t>> detect_collisions(
+                const std::vector<object_t>& objects, 
                 const std::vector<std::unique_ptr<StaticCollider>>& statics
         ) {
             
-            std::vector<Collision> result(objects.size());
+            std::vector<Collision<object_t>> result(objects.size());
             return result;
         }
     };
 
+    template<typename object_t>
     struct OnlyStaticCollisionDetector {
         OnlyStaticCollisionDetector(glm::vec2) {}
-        std::vector<Collision> detect_collisions(
-                const std::vector<SimulationObject>& objects, 
+        std::vector<Collision<object_t>> detect_collisions(
+                const std::vector<object_t>& objects, 
                 const std::vector<std::unique_ptr<StaticCollider>>& statics
         ) {
             
-            std::vector<Collision> result(objects.size());
+            std::vector<Collision<object_t>> result(objects.size());
             for (size_t i = 0; i < objects.size(); ++i) {
                 // Detect statics collisions
                 for (const auto& st : statics) {

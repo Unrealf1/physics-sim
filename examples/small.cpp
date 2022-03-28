@@ -18,6 +18,7 @@
 #include "util.hpp"
 
 using namespace std::chrono_literals;
+using sim_obj_t = Physics::SimulationObject<Physics::CircleCollider>;
 
 
 int main(int, char *[]) {
@@ -27,7 +28,7 @@ int main(int, char *[]) {
 
     Window w(p);
     
-    Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<2>> sim({920, 680});
+    Physics::Simulation<sim_obj_t, Physics::ForwardEuler, Physics::BucketCollisionDetector<sim_obj_t, 2>> sim({920, 680});
     sim.add_force(Physics::Forces::earth_gravitation());
     Physics::CircleCollider collider = {{{100.0f + 10, 10.0f+10}}, 15.0f};
     Physics::PhysicsItem item = {1.0f, collider.m_position, {80.0f, 0.0f}};

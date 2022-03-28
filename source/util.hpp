@@ -65,7 +65,7 @@ auto make_physics_thread(Sim* simulation, PhysicsParameters parameters) {
     };
 }
 
-inline Physics::SimulationObject create_sim_object(glm::vec2 position, glm::vec2 velocity, float radius, float mass) {
+inline Physics::SimulationObject<Physics::CircleCollider> create_sim_object(glm::vec2 position, glm::vec2 velocity, float radius, float mass) {
     Physics::CircleCollider collider = {{ position }, radius};
     Physics::PhysicsItem item = {mass, collider.m_position, velocity};
     return {collider, item};

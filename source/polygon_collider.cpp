@@ -1,5 +1,7 @@
 #include "colliders.hpp"
 
+#include <spdlog/spdlog.h>
+
 #include <ranges>
 #include <algorithm>
 #include <deque>
@@ -139,7 +141,7 @@ bool PolygonCollider::is_colliding(const PolygonCollider& other) const {
     auto points2 = other.m_vertices | transform([other](const glm::vec2& vertex) {return vertex + other.m_position;});
     simplex.push(SupportMapping(initial_direction, points1, points2));
     auto current_direction = -simplex.points[0];
-
+    size_t iteration = 0;
     while (true) {
 		auto new_point = SupportMapping(current_direction, points1, points2);
  
@@ -152,6 +154,26 @@ bool PolygonCollider::is_colliding(const PolygonCollider& other) const {
         if (NextSimplex(simplex, current_direction)) {
 			return true;
 		}
+        ++iteration;
+        if (iteration > 100) {
+            spdlog::warn("situation:\ndirection: {},{}; simplex: {},{}; {},{}; {},{}; (size={})\nfigure1: {},{}; {},{}; {},{}\nfigure2: {},{}; {},{}; {},{}",
+                current_direction.x, current_direction.y, 
+                simplex.points[0].x, simplex.points[0].y,
+                simplex.points[1].x, simplex.points[1].y,
+                simplex.points[2].x, simplex.points[2].y,
+                simplex.size,
+                (*(points1.begin())).x, (*(points1.begin())).y,
+                (*(points1.begin() + 1)).x, (*(points1.begin() + 1)).y,
+                (*(points1.begin() + 2)).x, (*(points1.begin() + 2)).y,
+                (*(points2.begin())).x, (*(points2.begin())).y,
+                (*(points2.begin() + 1)).x, (*(points2.begin() + 1)).y,
+                (*(points2.begin() + 2)).x, (*(points2.begin() + 2)).y
+            );
+        }
+        if (iteration > 110) {
+            spdlog::error("Too many simplex iterations");
+            return false;
+        }
     }
 }
 

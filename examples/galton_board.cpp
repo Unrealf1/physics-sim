@@ -27,6 +27,7 @@
 #include "util.hpp"
 
 using namespace std::chrono_literals;
+using sim_obj_t = Physics::SimulationObject<Physics::CircleCollider>;
 
 
 std::filesystem::path get_prediction_dir() {
@@ -50,7 +51,7 @@ int main(int, char *[]) {
     uint32_t sim_width = 1000;
     uint32_t sim_height = 900;
 
-    Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<9>> sim({sim_width, sim_height});
+    Physics::Simulation<sim_obj_t, Physics::ForwardEuler, Physics::BucketCollisionDetector<sim_obj_t, 9>> sim({sim_width, sim_height});
     //Physics::Simulation<Physics::ForwardEuler, Physics::OnlyStaticCollisionDetector> sim({sim_width, sim_height});
     sim.add_force(Physics::Forces::earth_gravitation());
     sim.add_force(Physics::Forces::damping(0.17f));

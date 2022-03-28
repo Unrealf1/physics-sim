@@ -80,7 +80,9 @@ namespace Physics {
     struct StaticCollider {
     public:
         virtual bool is_colliding(const CircleCollider& circle) const = 0;
+        virtual bool is_colliding(const PolygonCollider& circle) const = 0;
         virtual glm::vec2 collision_point(const CircleCollider& circle) const = 0;
+        virtual glm::vec2 collision_point(const PolygonCollider& circle) const = 0;
         virtual float distance(glm::vec2 point) const = 0;
         virtual void visualize(Visualizer& vis) const = 0;
         virtual ~StaticCollider() = default;
@@ -91,10 +93,12 @@ namespace Physics {
         StaticSegmentCollider(glm::vec2 start, glm::vec2 end);
 
         bool is_colliding(const CircleCollider& circle) const override;
+        bool is_colliding(const PolygonCollider& circle) const override { return false; }
 
         //TODO implement or remove
         float distance(glm::vec2) const override;
         glm::vec2 collision_point(const CircleCollider& circle) const override;
+        glm::vec2 collision_point(const PolygonCollider&) const override { return {}; };
         void visualize(Visualizer& vis) const override;
     
     private:
@@ -110,8 +114,10 @@ namespace Physics {
         StaticCircleCollider(glm::vec2 position, float radius);
         
         bool is_colliding(const CircleCollider& circle) const override;
+        bool is_colliding(const PolygonCollider& circle) const override { return false; }
         float distance(glm::vec2 point) const override;
         glm::vec2 collision_point(const CircleCollider& circle) const override;
+        glm::vec2 collision_point(const PolygonCollider&) const override { return {}; };
         void visualize(Visualizer& vis) const override;
 
     private:
