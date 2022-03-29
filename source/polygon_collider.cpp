@@ -1,7 +1,9 @@
 #include "colliders.hpp"
 #include "glm/fwd.hpp"
+#include "glm/geometric.hpp"
 
 #include <cmath>
+#include <functional>
 #include <spdlog/spdlog.h>
 
 #include <ranges>
@@ -200,7 +202,7 @@ bool PolygonCollider::is_colliding(const PolygonCollider& other) const {
     }
 }
 
-glm::vec2 PolygonCollider::get_collision_point(const PolygonCollider& other) const {
+std::pair<glm::vec2, glm::vec2> PolygonCollider::get_collision_point_and_normal(const PolygonCollider& other) const {
     auto other_direction = other.m_position - m_position;
     auto points1 = get_world_points();
     auto points2 = other.get_world_points();
@@ -211,9 +213,21 @@ glm::vec2 PolygonCollider::get_collision_point(const PolygonCollider& other) con
     auto d1 = glm::distance(m_position, p1) + glm::distance(p1, other.m_position);
     auto d2 = glm::distance(m_position, p2) + glm::distance(p2, other.m_position);
     if (d1 < d2) {
-        return p1;
+        auto comp = [&](const auto& first, const auto& second) {
+            return glm::distance(first, p1) > glm::distance(second, p1);
+        };
+        std::nth_element(points2.begin(), points2.begin() + 1, points2.end(), comp);
+        auto touch_vec = *points2.rbegin() - *(points2.rbegin() + 1);
+        glm::vec2 norm_dir = { -touch_vec.y, touch_vec.x };
+        return {p1, glm::normalize(norm_dir)};
     } else {
-        return p2;
+        auto comp = [&](const auto& first, const auto& second) {
+            return glm::distance(first, p2) > glm::distance(second, p2);
+        };
+        std::nth_element(points1.begin(), points1.begin() + 1, points1.end(), comp);
+        auto touch_vec = *points1.rbegin() - *(points1.rbegin() + 1);
+        glm::vec2 norm_dir = { -touch_vec.y, touch_vec.x };
+        return {p2, glm::normalize(norm_dir)};
     }
 }
 

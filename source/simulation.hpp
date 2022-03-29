@@ -176,7 +176,7 @@ namespace Physics {
                 if (is_unnecessary()) {
                     continue;
                 }
-                auto collision_point = copy.m_collider.get_collision_point(collided_obj.m_collider);           
+                auto [collision_point, collision_normal] = copy.m_collider.get_collision_point_and_normal(collided_obj.m_collider);           
                 auto m1 = copy.m_phys_item.mass;
                 auto m2 = collided_obj.m_phys_item.mass;
                 float dm = m1 - m2;
@@ -184,9 +184,10 @@ namespace Physics {
 
                 auto& v1 = copy.m_phys_item.speed;
                 auto& v2 = collided_obj.m_phys_item.speed;
-                auto dp = copy.m_phys_item.position - collided_obj.m_phys_item.position;
-                glm::vec2 dp_rot = { -dp.y, dp.x };
-                auto touch_vec = glm::normalize(dp_rot);
+                glm::vec2 norm_rot = { -collision_normal.y, collision_normal.x };
+                auto touch_vec = glm::normalize(norm_rot);
+
+                
 
                 auto proj_len_1 = glm::dot(touch_vec, v1);
                 auto proj_1 = touch_vec * proj_len_1; // not changing during interaction

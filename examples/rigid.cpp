@@ -36,7 +36,7 @@ int main(int, char *[]) {
     Physics::PhysicsItem item = {1.0f, collider.m_position, {-30.0f, 0.0f}, 1.0f, 0.0f, 0.1f};
     sim.add_circle({collider, item});
 
-    collider = {{{50.0f + 10, 10.0f+10}}, {{0.0f, 40.0f}, {40.0f, 40.0f}, {10.0f, 50.0f}}};
+    collider = {{{50.0f + 10, 10.0f+10}}, {{0.0f, 40.0f}, {50.0f, 40.0f}, {10.0f, 70.0f}}};
     item = {1.0f, collider.m_position, {80.0f, 0.0f}};
     sim.add_circle({collider, item});
 
