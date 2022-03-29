@@ -17,7 +17,7 @@ namespace Physics {
         float mass;
         glm::vec2 position;
         glm::vec2 speed;
-        float moment_of_inertia = 0.0f;
+        float moment_of_inertia = 1.0f;
         float orientation = 0.0f; // radians closkwise
         float rotation_speed = 0.0f; // positive = clockwise
         item_id_t id = generate_item_id();

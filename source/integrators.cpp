@@ -54,8 +54,8 @@ namespace Physics {
             new_position,
             new_speed,
             item.moment_of_inertia,
-            new_rotation_speed,
             new_orientation,
+            new_rotation_speed,
             item.id
         };   
     }

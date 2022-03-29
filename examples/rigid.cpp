@@ -32,12 +32,12 @@ int main(int, char *[]) {
     
     Physics::Simulation<sim_obj_t, Physics::ForwardEuler, Physics::SimpleCollisionDetector<sim_obj_t>> sim({500, 500});
     sim.add_force(Physics::Forces::earth_gravitation());
-    Physics::PolygonCollider collider = {{{100.0f + 10, 10.0f+10}}, {{0.0f, 0.0f}, {30.0f, 10.0f}, {0.0f, 30.0f}}};
-    Physics::PhysicsItem item = {1.0f, collider.m_position, {80.0f, 0.0f}};
+    Physics::PolygonCollider collider = {{{100.0f + 10, 10.0f + 10}}, {{0.0f, 0.0f}, {60.0f, 10.0f}, {0.0f, 30.0f}}};
+    Physics::PhysicsItem item = {1.0f, collider.m_position, {-30.0f, 0.0f}, 1.0f, 0.0f, 0.1f};
     sim.add_circle({collider, item});
 
-    collider = {{{100.0f + 10, 10.0f+10}}, {{0.0f, 40.0f}, {10.0f, 40.0f}, {10.0f, 50.0f}}};
-    item = {1.0f, collider.m_position, {-80.0f, 0.0f}};
+    collider = {{{50.0f + 10, 10.0f+10}}, {{0.0f, 40.0f}, {40.0f, 40.0f}, {10.0f, 50.0f}}};
+    item = {1.0f, collider.m_position, {80.0f, 0.0f}};
     sim.add_circle({collider, item});
 
     sim.add_static_collider(std::make_unique<Physics::StaticSegmentCollider>(glm::vec2{500.0f, 500.0f}, glm::vec2{700.0f, 700.0f}));
@@ -57,17 +57,17 @@ int main(int, char *[]) {
             }
         }
         auto frame_objects = sim.get_objects();
+        auto& o = frame_objects[0];
         for (const auto& item : frame_objects) {
-            auto offset = item.m_collider.m_position;
-            auto last_point = *(item.m_collider.m_vertices.begin());
+            auto points = item.m_collider.get_world_points();
+            auto last_point = *(points.begin());
             auto first_point = last_point;
             auto color = v.some_color(item.m_phys_item.id);
-            auto points = item.m_collider.get_world_points();
             for (const auto& point : points | drop(1)) {
-                v.draw_line(last_point + offset, point + offset, color);
+                v.draw_line(last_point, point, color);
                 last_point = point;  
             }
-            v.draw_line(last_point + offset, first_point + offset, color);
+            v.draw_line(last_point, first_point, color);
         }
 
         const auto& statics = sim.get_static_colliders();

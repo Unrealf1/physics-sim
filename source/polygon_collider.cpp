@@ -110,7 +110,7 @@ bool NextSimplex(Simplex& simplex, glm::vec2& direction) {
         glm::vec2 AO = -simplex.points[0];
 
         if (SameDirection(ACn, AO)) {
-            if (!SameDirection(AC, AO)) {
+            if (SameDirection(AC, AO)) {
                 // AC is the simplex
                 simplex.size = 2;
                 simplex.points[1] = simplex.points[2];
@@ -155,7 +155,7 @@ bool PolygonCollider::is_colliding(const PolygonCollider& other) const {
     auto points2 = other.get_world_points();
     simplex.push(SupportMapping(initial_direction, points1, points2));
     auto current_direction = -simplex.points[0];
-    //size_t iteration = 0;
+    size_t iteration = 0;
     while (true) {
 		auto new_point = SupportMapping(current_direction, points1, points2);
  
@@ -164,15 +164,39 @@ bool PolygonCollider::is_colliding(const PolygonCollider& other) const {
         }
 
 		simplex.push(new_point);
+        if (iteration > 105) {
+            spdlog::warn("situation:\ndirection: {},{}; simplex: {},{}; {},{}; {},{}; (size={}, dot={})\nfigure1: {},{}; {},{}; {},{}\nfigure2: {},{}; {},{}; {},{}",
+                current_direction.x, current_direction.y,
+                simplex.points[0].x, simplex.points[0].y,
+                simplex.points[1].x, simplex.points[1].y,
+                simplex.points[2].x, simplex.points[2].y,
+                simplex.size,
+                glm::dot(new_point, current_direction),
+                (*(points1.begin())).x, (*(points1.begin())).y,
+                (*(points1.begin() + 1)).x, (*(points1.begin() + 1)).y,
+                (*(points1.begin() + 2)).x, (*(points1.begin() + 2)).y,
+                (*(points2.begin())).x, (*(points2.begin())).y,
+                (*(points2.begin() + 1)).x, (*(points2.begin() + 1)).y,
+                (*(points2.begin() + 2)).x, (*(points2.begin() + 2)).y
+            );
+        }
         if (NextSimplex(simplex, current_direction)) {
 			return true;
-		} 
-        //++iteration;
+		}
+        if (iteration > 105) {
+        spdlog::warn("after simplex update:\ndirection: {},{}; simplex: {},{}; {},{}; {},{}; (size={})",
+                current_direction.x, current_direction.y,
+                simplex.points[0].x, simplex.points[0].y,
+                simplex.points[1].x, simplex.points[1].y,
+                simplex.points[2].x, simplex.points[2].y,
+                simplex.size);
+        }
+        ++iteration;
 
-        //if (iteration > 110) {
-        //    spdlog::error("Too many simplex iterations");
-        //    return false;
-        //}
+        if (iteration > 110) {
+            spdlog::error("Too many simplex iterations");
+            return false;
+        }
     }
 }
 
