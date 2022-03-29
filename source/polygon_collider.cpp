@@ -61,7 +61,7 @@ bool NextSimplex(Simplex& simplex, glm::vec2& direction) {
     //TODO: remove copypaste and make more readable
     if (simplex.size == 2) {
         // Line case
-        glm::vec2 AB = simplex.points[0] - simplex.points[1];
+        glm::vec2 AB = simplex.points[1] - simplex.points[0];
         glm::vec2 AO = -simplex.points[0];
         if (SameDirection(AB, AO)) {
             // AB is still the simplex
@@ -150,18 +150,14 @@ bool PolygonCollider::is_colliding(const PolygonCollider& other) const {
         }
 
 		simplex.push(new_point);
-
-        if (NextSimplex(simplex, current_direction)) {
-			return true;
-		}
-        ++iteration;
-        if (iteration > 100) {
-            spdlog::warn("situation:\ndirection: {},{}; simplex: {},{}; {},{}; {},{}; (size={})\nfigure1: {},{}; {},{}; {},{}\nfigure2: {},{}; {},{}; {},{}",
+        if (iteration > 105) {
+            spdlog::warn("situation:\ndirection: {},{}; simplex: {},{}; {},{}; {},{}; (size={}, dot={})\nfigure1: {},{}; {},{}; {},{}\nfigure2: {},{}; {},{}; {},{}",
                 current_direction.x, current_direction.y, 
                 simplex.points[0].x, simplex.points[0].y,
                 simplex.points[1].x, simplex.points[1].y,
                 simplex.points[2].x, simplex.points[2].y,
                 simplex.size,
+                glm::dot(new_point, current_direction),
                 (*(points1.begin())).x, (*(points1.begin())).y,
                 (*(points1.begin() + 1)).x, (*(points1.begin() + 1)).y,
                 (*(points1.begin() + 2)).x, (*(points1.begin() + 2)).y,
@@ -170,6 +166,19 @@ bool PolygonCollider::is_colliding(const PolygonCollider& other) const {
                 (*(points2.begin() + 2)).x, (*(points2.begin() + 2)).y
             );
         }
+        if (NextSimplex(simplex, current_direction)) {
+			return true;
+		} 
+        if (iteration > 105) {
+        spdlog::warn("after simplex update:\ndirection: {},{}; simplex: {},{}; {},{}; {},{}; (size={})",
+                current_direction.x, current_direction.y, 
+                simplex.points[0].x, simplex.points[0].y,
+                simplex.points[1].x, simplex.points[1].y,
+                simplex.points[2].x, simplex.points[2].y,
+                simplex.size);
+        }
+        ++iteration;
+
         if (iteration > 110) {
             spdlog::error("Too many simplex iterations");
             return false;
