@@ -1,4 +1,5 @@
 #include "colliders.hpp"
+#include "glm/geometric.hpp"
 
 #include <ranges>
 
@@ -31,6 +32,11 @@ bool CircleCollider::is_colliding(glm::vec2 ray_start, glm::vec2 ray_point) cons
         - 2.0f * (p0.x * m_position.x + p0.y * m_position.y);
     float D = std::sqrt((b * b) - 4.0f * a * c);
     return (D > b) | (D > -b);
+}
+
+glm::vec2 CircleCollider::get_collision_point(const CircleCollider& other) const {
+    //TODO: optimize
+    return m_position + m_radius * glm::normalize(other.m_position - m_position);
 }
 
 // StaticSegmentCollider

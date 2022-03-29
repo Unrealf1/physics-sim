@@ -107,7 +107,7 @@ namespace Physics {
             active_buffer.clear();
 
             // not default phys_item construction so new item ids are not taken
-            active_buffer.resize(last_buffer.size(), {{}, {0.0f, glm::vec2{0.0f, 0.0f}, glm::vec2{0.0f, 0.0f}, size_t(-1)}});
+            active_buffer.resize(last_buffer.size(), {{}, {0.0f, glm::vec2{0.0f, 0.0f}, glm::vec2{0.0f, 0.0f}, 0.0f, 0.0f, 0.0f, size_t(-1)}});
             
             const auto collisions = m_collision_detector.detect_collisions(last_buffer, m_static_colliders);
             //const auto integrated = last_buffer 
@@ -175,7 +175,8 @@ namespace Physics {
                 };
                 if (is_unnecessary()) {
                     continue;
-                }            
+                }
+                auto collision_point = copy.m_collider.get_collision_point(collided_obj.m_collider);           
                 auto m1 = copy.m_phys_item.mass;
                 auto m2 = collided_obj.m_phys_item.mass;
                 float dm = m1 - m2;
@@ -234,6 +235,7 @@ namespace Physics {
 
             copy.m_phys_item = m_integrator.update(dt, copy.m_phys_item);
             copy.m_collider.m_position = copy.m_phys_item.position;
+            copy.m_collider.m_rotation = copy.m_phys_item.orientation;
             return copy;                  
         }
 

@@ -1,5 +1,7 @@
 #include "colliders.hpp"
+#include "glm/fwd.hpp"
 
+#include <cmath>
 #include <spdlog/spdlog.h>
 
 #include <ranges>
@@ -14,15 +16,27 @@ namespace Physics {
 
 
 // PolygonCollider
+std::vector<glm::vec2> PolygonCollider::get_world_points() const {
+    float cos = std::cos(m_rotation);
+    float sin = std::sin(m_rotation);
+    auto rotate = [this, sin, cos](const glm::vec2& vertex) -> glm::vec2 { return {vertex.x * cos - vertex.y * sin, vertex.y * cos + vertex.x * sin}; };
+    auto translate = [this](const glm::vec2& vertex) -> glm::vec2 {return vertex + m_position;};
+    auto points = m_vertices | transform(rotate) | transform(translate);
+    return {points.begin(), points.end()};
+}
+
 bool PolygonCollider::is_colliding_x(float border) const {
-    auto dx = m_vertices
-        | transform([this, border](const glm::vec2& vertex) { return (vertex.x + m_position.x) - border; });
+    auto points = get_world_points();
+    auto dx = points
+        | transform([this, border](const glm::vec2& vertex) { return vertex.x  - border; });
     const auto [min, max] = minmax_element(dx);
     return (*min) * (*max) < 0.0f;
 }
+
 bool PolygonCollider::is_colliding_y(float border) const {
-    auto dy = m_vertices
-        | transform([this, border](const glm::vec2& vertex) { return (vertex.y + m_position.y) - border; });
+    auto points = get_world_points();
+    auto dy = points
+        | transform([this, border](const glm::vec2& vertex) { return vertex.y - border; });
     const auto [min, max] = minmax_element(dy);
     return (*min) * (*max) < 0.0f;
 }
@@ -137,8 +151,8 @@ bool NextSimplex(Simplex& simplex, glm::vec2& direction) {
 bool PolygonCollider::is_colliding(const PolygonCollider& other) const {
     glm::vec2 initial_direction{1.0f, 0.0f};
     Simplex simplex;
-    auto points1 = m_vertices | transform([this](const glm::vec2& vertex) {return vertex + m_position;});
-    auto points2 = other.m_vertices | transform([other](const glm::vec2& vertex) {return vertex + other.m_position;});
+    auto points1 = get_world_points();
+    auto points2 = other.get_world_points();
     simplex.push(SupportMapping(initial_direction, points1, points2));
     auto current_direction = -simplex.points[0];
     //size_t iteration = 0;
@@ -159,6 +173,23 @@ bool PolygonCollider::is_colliding(const PolygonCollider& other) const {
         //    spdlog::error("Too many simplex iterations");
         //    return false;
         //}
+    }
+}
+
+glm::vec2 PolygonCollider::get_collision_point(const PolygonCollider& other) const {
+    auto other_direction = other.m_position - m_position;
+    auto points1 = get_world_points();
+    auto points2 = other.get_world_points();
+    //TODO: is this correct? :)
+    auto p1 = FindFurthest(other_direction, points1);
+    auto p2 = FindFurthest(other_direction, points2);
+
+    auto d1 = glm::distance(m_position, p1) + glm::distance(p1, other.m_position);
+    auto d2 = glm::distance(m_position, p2) + glm::distance(p2, other.m_position);
+    if (d1 < d2) {
+        return p1;
+    } else {
+        return p2;
     }
 }
 

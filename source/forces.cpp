@@ -23,11 +23,17 @@ namespace Physics { namespace Forces {
             }
             return glm::normalize(diff) * power;                
         };
+        
+        //TODO:
+        auto torque = [](const PhysicsItem& item) {
+            return 0.0f;
+        };
+
         auto filt = [=](const PhysicsItem& item) {
             return item.id == first || item.id == second;
         };
 
-        return { calc, filt };
+        return { calc, torque, filt };
     }
 
 

@@ -16,11 +16,14 @@ namespace Physics {
         //using filter_t = bool (*)(const PhysicsItem&);
         using filter_t = std::function<bool(const PhysicsItem&)>;
         using calc_t = std::function<glm::vec2(const PhysicsItem&)>;
+        using calc_torque_t = std::function<float(const PhysicsItem&)>;
 
         bool is_affecting(const PhysicsItem& item) { return m_filter(item); }
         glm::vec2 calculate (const PhysicsItem& item) { return m_calc(item); }
+        float calculate_torque (const PhysicsItem& item) { return m_calc_torque(item); }
 
         calc_t m_calc;
+        calc_torque_t m_calc_torque = [](const PhysicsItem&) { return 0.0f; };
         filter_t m_filter = [](const PhysicsItem&) { return true; };
     };
 

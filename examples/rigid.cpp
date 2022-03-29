@@ -62,7 +62,8 @@ int main(int, char *[]) {
             auto last_point = *(item.m_collider.m_vertices.begin());
             auto first_point = last_point;
             auto color = v.some_color(item.m_phys_item.id);
-            for (const auto& point : item.m_collider.m_vertices | drop(1)) {
+            auto points = item.m_collider.get_world_points();
+            for (const auto& point : points | drop(1)) {
                 v.draw_line(last_point + offset, point + offset, color);
                 last_point = point;  
             }
