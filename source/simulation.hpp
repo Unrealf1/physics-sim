@@ -127,12 +127,12 @@ namespace Physics {
                 // TODO: investigate
                 [this, dt](const object_t& obj, const Collision<object_t>& collision) { return process_object(dt, obj, collision); }
             );
-            switch_buffers();
-            /*
             if (!all_of(collisions, [](const auto& collision) { return collision.objects.empty(); })) {
                 using namespace std::chrono_literals;
-                std::this_thread::sleep_for(1s);
-            }*/
+                //std::this_thread::sleep_for(1s);
+            }
+            switch_buffers();
+            
         }
 
         const glm::vec2& get_simulation_rectangle() const {
@@ -174,24 +174,70 @@ namespace Physics {
         object_t process_object(float dt, object_t copy, const Collision<object_t>& collision) {
             // process collisions
             for (const object_t& collided_obj : collision.objects) {
-                //TODO: calc integrator step once
-                //for every item beforehand
-                /*auto is_unnecessary = [&]{
-                    auto new_item = m_integrator.update(dt, copy.m_phys_item);
-                    auto new_item2 = m_integrator.update(dt, collided_obj.m_phys_item);
-                    auto cur_dist = glm::distance(copy.m_phys_item.position, collided_obj.m_phys_item.position);
-                    auto new_dist = glm::distance(new_item.position, new_item2.position);
-                    return new_dist > cur_dist;
+                auto cross = [](const auto& vec1, const auto& vec2) -> float {
+                    return (vec1.x * vec2.y) - (vec1.y * vec2.x);
                 };
-                if (is_unnecessary()) {
-                    continue;
-                }*/
+                
+                auto scalar_cross = [](float scalar, const auto& vec) {
+                    return decltype(vec){-vec.y, vec.x} * scalar;
+                };
+
                 auto [collision_point1, collision_point2, collision_normal] = copy.m_collider.get_collision_points_and_normal(collided_obj.m_collider);
-                bool first_closer = glm::distance(collision_point1, copy.m_phys_item.position) < glm::distance(collision_point2, copy.m_phys_item.position);
+                
+                // Maybe just check if the point is in the list?..
+                bool this_penetrated = glm::distance(collision_point1, copy.m_phys_item.position) < glm::distance(collision_point2, copy.m_phys_item.position);
+                auto& collision_point = collision_point1;
+                
+                // Impulse solution
+                auto& n = collision_normal;
+                auto m1 = copy.m_phys_item.mass;
+                auto m2 = collided_obj.m_phys_item.mass;
+                auto i1 = copy.m_phys_item.inertia;
+                auto i2 = collided_obj.m_phys_item.inertia;
+
+                auto v1 = copy.m_phys_item.speed;
+                auto v2 = collided_obj.m_phys_item.speed;
+                auto w1 = copy.m_phys_item.rotation_speed;
+                auto w2 = collided_obj.m_phys_item.rotation_speed;
+
+                auto r1 = collision_point - copy.m_phys_item.position;
+                auto r2 = collision_point - collided_obj.m_phys_item.position;
+
+                // velocity of the collision point on a given body
+                auto vp1 = v1 + scalar_cross(w1, r1);
+                auto vp2 = v2 + scalar_cross(w2, r2);
+                
+                // relative velocity of the points
+                auto vp = vp1 - vp2;
+                
+                // relative normal velocity
+                auto vpn = glm::dot(vp, n);
+                /*if (this_penetrated) {
+                    vpn *= -1.0f;
+                }*/
+
+                if (vpn > 0.0f) {
+                    // bodies are moving away from each other
+                    continue;
+                }
+                
+                float elasticity = 0.3f;
+                float rn1 = cross(r1, n);
+                float rn2 = cross(r2, n);
+                float impulse_strength = (-(1 + elasticity) * glm::dot(vp, n)) / (1 / m1 + 1 / m2 + rn1*rn1/i1 + rn2*rn2/i2);
+
+                float impulse_sign = this_penetrated ? -1.0f : 1.0f;
+                impulse_strength *= impulse_sign;
+                copy.m_phys_item.speed += impulse_strength * n / m1;
+                copy.m_phys_item.rotation_speed += cross(r1, impulse_strength * n) / i1;
+
+                // Constraints solution
+                /*bool first_closer = glm::distance(collision_point1, copy.m_phys_item.position) < glm::distance(collision_point2, copy.m_phys_item.position);
 
                 auto& my_p = first_closer ? collision_point2 : collision_point1;
                 auto& other_p = !first_closer ? collision_point2 : collision_point1;
                 auto pen_distance = glm::distance(collision_point1, collision_point2); //TODO: is this right?
+                pen_distance = 1.0f;
 
                 auto& n = collision_normal;
                 auto m1 = copy.m_phys_item.mass;
@@ -204,7 +250,7 @@ namespace Physics {
                 auto w1 = copy.m_phys_item.rotation_speed;
                 auto w2 = collided_obj.m_phys_item.rotation_speed;
                 
-                Eigen::DiagonalMatrix<float, 6> M(m1, m1, i1 , m2, m2, i2);
+                Eigen::DiagonalMatrix<float, 6> M(1.0f/m1, 1.0f/m1, 1.0f/i1, 1.0f/m2, 1.0f/m2, 1.0f/i2);
 
                 auto V = Eigen::Vector<float, 6>(v1.x, v1.y, w1, v2.x, v2.y, w2).transpose();
                 
@@ -217,16 +263,15 @@ namespace Physics {
                 
                 auto J = Eigen::Vector<float, 6>{n.x, n.y, cross(ra, n), -n.x, -n.y, -cross(rb, n)}.transpose();                
                 auto bias = 0.5f * std::max(pen_distance - 0.1f, 0.0f) / dt;
-                auto bias_vec = Eigen::Vector4f{bias, bias, bias, bias}.transpose();
                 
                 auto A = J * M * J.transpose();
                 auto B = -bias - J.dot(V);
-                auto lambda = B * A.inverse();
+                auto lambda = B / float(A);
                 auto dV = M * J.transpose() * lambda;
 
                 copy.m_phys_item.speed.x += dV[0];
                 copy.m_phys_item.speed.y += dV[1];
-                copy.m_phys_item.rotation_speed += dV[2];
+                copy.m_phys_item.rotation_speed += dV[2];*/
 #ifdef _DEBUG                
                 if (copy.m_phys_item.speed != copy.m_phys_item.speed) {
                     spdlog::warn("m1: {}, m2: {}, proj_len_1: {}, proj_len_2: {}, dp: {}, {}", m1, m2, proj_len_1, proj_len_2, dp.x, dp.y);

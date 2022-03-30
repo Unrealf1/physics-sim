@@ -207,38 +207,54 @@ bool PolygonCollider::is_colliding(const PolygonCollider& other) const {
 
 template<typename PointRange>
 bool is_inside(const glm::vec2 point, const PointRange& figure) {
+    auto cross = [](const auto& f, const auto& s) {
+        return f.x * s.y - f.y * s.x;
+    };
+    spdlog::error("checking point: {},{}", point.x, point.y);
     float sign = 0.0f;
     {
         glm::vec2 figure_point = *figure.begin();
         glm::vec2 previous_point = *figure.rbegin();
         auto vec = point - figure_point;
         auto edge = point - previous_point;
-        sign = glm::dot(vec, edge) < 0.0f ? -1.0f : 1.0f;
+        float c = cross(vec, edge);
+        sign = c < 0.0f ? -1.0f : 1.0f;
+        spdlog::warn("{},{}; {},{} : {}", edge.x, edge.y, vec.x, vec.y, cross(vec, edge));
     }
     auto previous_point = *figure.begin();
     for (const auto& figure_point : figure | drop(1)) {
         auto vec = point - figure_point;
         auto edge = point - previous_point;
-        if (glm::dot(vec, edge) * sign > 0.0f) {
+        spdlog::warn("{},{}; {},{} : {} ({})", edge.x, edge.y, vec.x, vec.y, cross(vec, edge), sign);
+        float c = cross(vec, edge);
+
+        if (sign * c < 0.0f) {
             return false;
         }
-        previous_point = point;  
+        previous_point = figure_point;  
     }
-    std::string str;
+    /*std::string str;
     for (const glm::vec2& p : figure ) {
         str += std::to_string(p.x) + ", " + std::to_string(p.y) + "; || ";
     }
-    spdlog::info("point {},{} is inside this figure: {}", point.x, point.y, str);
+    spdlog::info("point {},{} is inside this figure: {}", point.x, point.y, str);*/
     
     return true;
 }
 
 template<typename PointRange1, typename PointRange2>
 std::optional<glm::vec2> find_vertex_inside(const PointRange1& points1, const PointRange2& points2) {
+    glm::vec2 final_point = {0.0f, 0.0f};
+    float num_points = 0.0f;
     for (const auto& p : points1) {
         if (is_inside(p, points2)) {
-            return p;
+            spdlog::info("{},{} is inside!", p.x, p.y);
+            num_points += 1.0f;
+            final_point += p;
         }
+    }
+    if (num_points > 0.f) {
+        return final_point / num_points;
     }
     return {};
 }
@@ -248,6 +264,14 @@ std::tuple<glm::vec2, glm::vec2, glm::vec2> PolygonCollider::get_collision_point
     auto points1 = get_world_points();
     auto points2 = other.get_world_points();
     
+    auto fig_to_str = [](const auto& fig) {
+        std::string str = "";
+        for (const auto& p : fig) {
+            str += std::to_string(p.x) + ", " + std::to_string(p.y) + " || ";
+        }
+        return str;
+    };
+    spdlog::warn("figures: \n{}\n{}", fig_to_str(points1), fig_to_str(points2));
     auto p1 = find_vertex_inside(points1, points2);
     glm::vec2 penetration_point;
     bool first_penetrating = false;
@@ -260,33 +284,38 @@ std::tuple<glm::vec2, glm::vec2, glm::vec2> PolygonCollider::get_collision_point
         penetration_point = p2.value_or(other.m_position);
     }
     float closeness = std::numeric_limits<float>::max();
-    
+    spdlog::info("penetration point: {},{}", penetration_point.x, penetration_point.y);
     auto& penetrator = first_penetrating ? points1 : points2;
     auto& penetrated = !first_penetrating ? points1 : points2;
     glm::vec2 normal;
     glm::vec2 edge;
     glm::vec2 edge_point;
     auto previous_point = *penetrated.begin();
-    for (const auto& point : penetrated | drop(1)) {
+    glm::vec2 prev_edge = *penetrated.begin() - *penetrated.rbegin();
+    auto process = [&](auto& point) {
         float difference = glm::distance(penetration_point, previous_point) + glm::distance(penetration_point, point) - glm::distance(previous_point, point);
+        auto cur_edge = point - previous_point;
+        
         if (difference < closeness) {
             edge_point = point;
-            edge = point - previous_point;
+            edge = cur_edge;
             normal = glm::normalize(glm::vec2(-edge.y, edge.x));
+            if (!SameDirection(normal, prev_edge)) {
+                normal *= -1.0f;
+            }
             closeness = difference;
         }
+        prev_edge = cur_edge;
         previous_point = point;  
+    };
+
+    for (const auto& point : penetrated | drop(1)) {
+        process(point);
     }
     
     {
         glm::vec2 point = *penetrated.begin();
-        float difference = glm::distance(penetration_point, previous_point) + glm::distance(penetration_point, point) - glm::distance(previous_point, point);
-        if (difference < closeness) {
-            edge_point = point;
-            edge = point - previous_point;
-            normal = glm::normalize(glm::vec2(-edge.y, edge.x));
-            closeness = difference;
-        }
+        process(point);
     }
     
     auto A = edge_point;

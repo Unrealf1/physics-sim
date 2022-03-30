@@ -13,6 +13,7 @@
 #include "collision_detectors.hpp"
 #include "integrators.hpp"
 #include "physics_item.hpp"
+#include "simulation_object.hpp"
 #include "window.hpp"
 #include "simulation.hpp"
 #include "visualizer.hpp"
@@ -27,24 +28,36 @@ int main(int, char *[]) {
     WindowParams p {};
     p.w = 820;
     p.h = 380;
+    p.title = "Rigid bodies";
+    p.flags = SDL_WINDOW_RESIZABLE;
 
     Window w(p);
     
+    auto regular_polygon = [](size_t num_vertices, float radius, glm::vec2 position, glm::vec2 velocity = {0.0f, 0.0f}, float rot_velocity = 0.0f) -> sim_obj_t {
+        float angle_step = std::numbers::pi_v<float> * 2.0f / float(num_vertices);
+        std::vector<glm::vec2> vertices;
+        vertices.reserve(num_vertices);
+        for (size_t i = 0; i < num_vertices; ++i) {
+            float angle = angle_step * float(i);
+            vertices.emplace_back(
+                    std::cos(angle) * radius,
+                    std::sin(angle) * radius
+            );
+        }
+        Physics::PolygonCollider collider = {{position}, vertices};
+        Physics::PhysicsItem item = {1.0f, collider.m_position, velocity, 1.0f, 0.0f, rot_velocity};
+        return {collider, item};
+    };
+
     Physics::Simulation<sim_obj_t, Physics::ForwardEuler, Physics::SimpleCollisionDetector<sim_obj_t>> sim({500, 500});
-    sim.add_force(Physics::Forces::earth_gravitation());
-    Physics::PolygonCollider collider = {{{100.0f + 10, 10.0f + 10}}, {{0.0f, 0.0f}, {60.0f, 10.0f}, {0.0f, 30.0f}}};
-    Physics::PhysicsItem item = {1.0f, collider.m_position, {-30.0f, 0.0f}, 1.0f, 0.0f, 0.1f};
-    sim.add_circle({collider, item});
+    //sim.add_force(Physics::Forces::earth_gravitation());
 
-    collider = {{{50.0f + 10, 10.0f+10}}, {{0.0f, 40.0f}, {50.0f, 40.0f}, {10.0f, 70.0f}}};
-    item = {1.0f, collider.m_position, {80.0f, 0.0f}};
-    sim.add_circle({collider, item});
+    sim.add_circle(regular_polygon(3, 60, {130, 200}, {30.0f, 0.0f}, 0.0f));
+    sim.add_circle(regular_polygon(4, 70, {300, 220}, {-80.0f, 0.0f}, 0.0f));
 
-    sim.add_static_collider(std::make_unique<Physics::StaticSegmentCollider>(glm::vec2{500.0f, 500.0f}, glm::vec2{700.0f, 700.0f}));
-    
     Visualizer v(w);
     v.set_simulation_rectangle(sim.get_simulation_rectangle());
-    std::jthread phys_thread(make_physics_thread(&sim, { .physics_step = 1.0f/300.0f, .fps_limit = 500.0f  } ));
+    std::jthread phys_thread(make_physics_thread(&sim, { .physics_step = 1.0f/3000.0f, .fps_limit = 1000.0f }));
 
     bool quit = false;
     SDL_Event event;
@@ -68,15 +81,15 @@ int main(int, char *[]) {
                 auto [collision_point1, collision_point2, collision_normal] = obj.m_collider.get_collision_points_and_normal(collided.get().m_collider);
                 v.draw_circle(collision_point1, 7.0f, {255, 0, 0, 255});
                 v.draw_circle(collision_point2, 7.0f, {255, 0, 0, 255});
-                v.draw_line(collision_point1, collision_point1 + collision_normal, {0, 0, 255, 255});
-                spdlog::info("point1: {},{}; point2: {},{}; normal: {},{}",
+                v.draw_line(collision_point1, collision_point1 + collision_normal * 20.0f, {0, 0, 255, 255});
+                /*spdlog::info("point1: {},{}; point2: {},{}; normal: {},{}",
                         collision_point1.x, 
                         collision_point1.y, 
                         collision_point2.x, 
                         collision_point2.y, 
                         collision_normal.x,
                         collision_normal.y
-                );
+                );*/
             }
         }
 

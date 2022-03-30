@@ -110,7 +110,7 @@ int main(int, char *[]) {
     }
 
     // Add falling items
-    float circle_radius = knob_radius / 5.0f;
+    float circle_radius = knob_radius / 2.0f;
     glm::vec2 box_start = { float(sim_width) / 2.0f - section_len / 2.0f, circle_radius }; // left top
     glm::vec2 box_end = { box_start.x + section_len, top_offset - 2 * knob_radius - circle_radius }; // right bot
     float circle_area = circle_radius * 2.0f * 1.1f;
@@ -140,7 +140,7 @@ int main(int, char *[]) {
     );
 
     auto ref1 = sim.get_object_ref(100);
-    auto ref2 = sim.get_object_ref(5000);
+    auto ref2 = sim.get_object_ref(500);
 
     auto& p1 = sim.get_point_ref(ref1);
     auto& p2 = sim.get_point_ref(ref2);
