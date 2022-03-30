@@ -9,9 +9,12 @@
 #include <ranges>
 #include <algorithm>
 #include <deque>
+#include <optional>
+#include <limits>
 
 using std::views::transform;
 using std::ranges::minmax_element;
+using std::views::drop;
 using std::ranges::max_element;
 
 namespace Physics {
@@ -202,33 +205,98 @@ bool PolygonCollider::is_colliding(const PolygonCollider& other) const {
     }
 }
 
-std::pair<glm::vec2, glm::vec2> PolygonCollider::get_collision_point_and_normal(const PolygonCollider& other) const {
+template<typename PointRange>
+bool is_inside(const glm::vec2 point, const PointRange& figure) {
+    float sign = 0.0f;
+    {
+        glm::vec2 figure_point = *figure.begin();
+        glm::vec2 previous_point = *figure.rbegin();
+        auto vec = point - figure_point;
+        auto edge = point - previous_point;
+        sign = glm::dot(vec, edge) < 0.0f ? -1.0f : 1.0f;
+    }
+    auto previous_point = *figure.begin();
+    for (const auto& figure_point : figure | drop(1)) {
+        auto vec = point - figure_point;
+        auto edge = point - previous_point;
+        if (glm::dot(vec, edge) * sign > 0.0f) {
+            return false;
+        }
+        previous_point = point;  
+    }
+    std::string str;
+    for (const glm::vec2& p : figure ) {
+        str += std::to_string(p.x) + ", " + std::to_string(p.y) + "; || ";
+    }
+    spdlog::info("point {},{} is inside this figure: {}", point.x, point.y, str);
+    
+    return true;
+}
+
+template<typename PointRange1, typename PointRange2>
+std::optional<glm::vec2> find_vertex_inside(const PointRange1& points1, const PointRange2& points2) {
+    for (const auto& p : points1) {
+        if (is_inside(p, points2)) {
+            return p;
+        }
+    }
+    return {};
+}
+
+std::tuple<glm::vec2, glm::vec2, glm::vec2> PolygonCollider::get_collision_points_and_normal(const PolygonCollider& other) const {
     auto other_direction = other.m_position - m_position;
     auto points1 = get_world_points();
     auto points2 = other.get_world_points();
-    //TODO: is this correct? :)
-    auto p1 = FindFurthest(other_direction, points1);
-    auto p2 = FindFurthest(other_direction, points2);
-
-    auto d1 = glm::distance(m_position, p1) + glm::distance(p1, other.m_position);
-    auto d2 = glm::distance(m_position, p2) + glm::distance(p2, other.m_position);
-    if (d1 < d2) {
-        auto comp = [&](const auto& first, const auto& second) {
-            return glm::distance(first, p1) > glm::distance(second, p1);
-        };
-        std::nth_element(points2.begin(), points2.begin() + 1, points2.end(), comp);
-        auto touch_vec = *points2.rbegin() - *(points2.rbegin() + 1);
-        glm::vec2 norm_dir = { -touch_vec.y, touch_vec.x };
-        return {p1, glm::normalize(norm_dir)};
+    
+    auto p1 = find_vertex_inside(points1, points2);
+    glm::vec2 penetration_point;
+    bool first_penetrating = false;
+    if (p1.has_value()) {
+        penetration_point = p1.value();
+        first_penetrating = true;
     } else {
-        auto comp = [&](const auto& first, const auto& second) {
-            return glm::distance(first, p2) > glm::distance(second, p2);
-        };
-        std::nth_element(points1.begin(), points1.begin() + 1, points1.end(), comp);
-        auto touch_vec = *points1.rbegin() - *(points1.rbegin() + 1);
-        glm::vec2 norm_dir = { -touch_vec.y, touch_vec.x };
-        return {p2, glm::normalize(norm_dir)};
+        auto p2 = find_vertex_inside(points2, points1);
+        //TODO: do I need to think about case where point is not found?
+        penetration_point = p2.value_or(other.m_position);
     }
+    float closeness = std::numeric_limits<float>::max();
+    
+    auto& penetrator = first_penetrating ? points1 : points2;
+    auto& penetrated = !first_penetrating ? points1 : points2;
+    glm::vec2 normal;
+    glm::vec2 edge;
+    glm::vec2 edge_point;
+    auto previous_point = *penetrated.begin();
+    for (const auto& point : penetrated | drop(1)) {
+        float difference = glm::distance(penetration_point, previous_point) + glm::distance(penetration_point, point) - glm::distance(previous_point, point);
+        if (difference < closeness) {
+            edge_point = point;
+            edge = point - previous_point;
+            normal = glm::normalize(glm::vec2(-edge.y, edge.x));
+            closeness = difference;
+        }
+        previous_point = point;  
+    }
+    
+    {
+        glm::vec2 point = *penetrated.begin();
+        float difference = glm::distance(penetration_point, previous_point) + glm::distance(penetration_point, point) - glm::distance(previous_point, point);
+        if (difference < closeness) {
+            edge_point = point;
+            edge = point - previous_point;
+            normal = glm::normalize(glm::vec2(-edge.y, edge.x));
+            closeness = difference;
+        }
+    }
+    
+    auto A = edge_point;
+    auto a = edge;
+    auto B = penetration_point;
+    auto b = normal;
+    auto tb = (a.x * (B.y - A.y) - a.y * (B.x - A.x)) / (b.x * a.y - b.y * a.x);
+    auto projected_point = B + tb * b;
+
+    return { penetration_point, projected_point, normal };
 }
 
 //TODO: ?

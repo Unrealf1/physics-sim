@@ -12,12 +12,17 @@
 #include <mutex>
 
 #include <spdlog/spdlog.h>
+#include <Eigen/Core>
+#include <Eigen/Dense>
 
 #include "glm/geometric.hpp"
 #include "simulation_object.hpp"
 #include "integrators.hpp"
 #include "collision_detectors.hpp"
 
+using std::views::iota;
+using std::views::transform;
+using std::ranges::all_of;
 
 namespace Physics {
     template<typename object_t, Integrator integrator_t, CollisionDetector<object_t> collision_detector_t>
@@ -68,7 +73,7 @@ namespace Physics {
             if (it == objects.end()) {
                 throw std::out_of_range("Simulation does not have object with id " + std::to_string(id));
             }
-            return { *this, std::distance(objects.begin(), it) };
+            return { *this, size_t(std::distance(objects.begin(), it)) };
         }
 
         const PointReference& get_point_ref(const ObjectReference& obj_ref, glm::vec2 offset = {0.0f, 0.0f}) {
@@ -122,7 +127,12 @@ namespace Physics {
                 // TODO: investigate
                 [this, dt](const object_t& obj, const Collision<object_t>& collision) { return process_object(dt, obj, collision); }
             );
-            switch_buffers(); 
+            switch_buffers();
+            /*
+            if (!all_of(collisions, [](const auto& collision) { return collision.objects.empty(); })) {
+                using namespace std::chrono_literals;
+                std::this_thread::sleep_for(1s);
+            }*/
         }
 
         const glm::vec2& get_simulation_rectangle() const {
@@ -166,7 +176,7 @@ namespace Physics {
             for (const object_t& collided_obj : collision.objects) {
                 //TODO: calc integrator step once
                 //for every item beforehand
-                auto is_unnecessary = [&]{
+                /*auto is_unnecessary = [&]{
                     auto new_item = m_integrator.update(dt, copy.m_phys_item);
                     auto new_item2 = m_integrator.update(dt, collided_obj.m_phys_item);
                     auto cur_dist = glm::distance(copy.m_phys_item.position, collided_obj.m_phys_item.position);
@@ -175,31 +185,48 @@ namespace Physics {
                 };
                 if (is_unnecessary()) {
                     continue;
-                }
-                auto [collision_point, collision_normal] = copy.m_collider.get_collision_point_and_normal(collided_obj.m_collider);           
+                }*/
+                auto [collision_point1, collision_point2, collision_normal] = copy.m_collider.get_collision_points_and_normal(collided_obj.m_collider);
+                bool first_closer = glm::distance(collision_point1, copy.m_phys_item.position) < glm::distance(collision_point2, copy.m_phys_item.position);
+
+                auto& my_p = first_closer ? collision_point2 : collision_point1;
+                auto& other_p = !first_closer ? collision_point2 : collision_point1;
+                auto pen_distance = glm::distance(collision_point1, collision_point2); //TODO: is this right?
+
+                auto& n = collision_normal;
                 auto m1 = copy.m_phys_item.mass;
                 auto m2 = collided_obj.m_phys_item.mass;
-                float dm = m1 - m2;
-                float sm = m1 + m2;
+                auto i1 = copy.m_phys_item.inertia;
+                auto i2 = collided_obj.m_phys_item.inertia;
 
-                auto& v1 = copy.m_phys_item.speed;
-                auto& v2 = collided_obj.m_phys_item.speed;
-                glm::vec2 norm_rot = { -collision_normal.y, collision_normal.x };
-                auto touch_vec = glm::normalize(norm_rot);
-
+                auto v1 = copy.m_phys_item.speed;
+                auto v2 = collided_obj.m_phys_item.speed;
+                auto w1 = copy.m_phys_item.rotation_speed;
+                auto w2 = collided_obj.m_phys_item.rotation_speed;
                 
+                Eigen::DiagonalMatrix<float, 6> M(m1, m1, i1 , m2, m2, i2);
 
-                auto proj_len_1 = glm::dot(touch_vec, v1);
-                auto proj_1 = touch_vec * proj_len_1; // not changing during interaction
-                auto other_1 = v1 - proj_1; //changes during interaction
+                auto V = Eigen::Vector<float, 6>(v1.x, v1.y, w1, v2.x, v2.y, w2).transpose();
                 
-                auto proj_len_2 = glm::dot(touch_vec, v2);
-                auto proj_2 = touch_vec * proj_len_2; // not changing during interaction
-                auto other_2 = v2 - proj_2; //changes during interaction
+                auto cross = [](const auto& vec1, const auto& vec2) -> float {
+                    return (vec1.x * vec2.y) - (vec1.y * vec2.x);
+                };
 
-                auto changed_v = (2 * m2 * other_2 + other_1 * dm) / sm;
+                auto ra = my_p - copy.m_phys_item.position;
+                auto rb = other_p - collided_obj.m_phys_item.position;
+                
+                auto J = Eigen::Vector<float, 6>{n.x, n.y, cross(ra, n), -n.x, -n.y, -cross(rb, n)}.transpose();                
+                auto bias = 0.5f * std::max(pen_distance - 0.1f, 0.0f) / dt;
+                auto bias_vec = Eigen::Vector4f{bias, bias, bias, bias}.transpose();
+                
+                auto A = J * M * J.transpose();
+                auto B = -bias - J.dot(V);
+                auto lambda = B * A.inverse();
+                auto dV = M * J.transpose() * lambda;
 
-                copy.m_phys_item.speed = proj_1 + changed_v;
+                copy.m_phys_item.speed.x += dV[0];
+                copy.m_phys_item.speed.y += dV[1];
+                copy.m_phys_item.rotation_speed += dV[2];
 #ifdef _DEBUG                
                 if (copy.m_phys_item.speed != copy.m_phys_item.speed) {
                     spdlog::warn("m1: {}, m2: {}, proj_len_1: {}, proj_len_2: {}, dp: {}, {}", m1, m2, proj_len_1, proj_len_2, dp.x, dp.y);

@@ -34,11 +34,12 @@ bool CircleCollider::is_colliding(glm::vec2 ray_start, glm::vec2 ray_point) cons
     return (D > b) | (D > -b);
 }
 
-std::pair<glm::vec2, glm::vec2> CircleCollider::get_collision_point_and_normal(const CircleCollider& other) const {
+std::tuple<glm::vec2, glm::vec2, glm::vec2> CircleCollider::get_collision_points_and_normal(const CircleCollider& other) const {
     //TODO: optimize
-    auto point = m_position + m_radius * glm::normalize(other.m_position - m_position);
-    auto vec = other.m_position - m_position;
-    return {point, glm::normalize(vec)};
+    auto direction = glm::normalize(other.m_position - m_position);
+    auto my_point = m_position + direction * m_radius;
+    auto other_point = other.m_position - direction * other.m_radius;
+    return { my_point, other_point, direction };
 }
 
 // StaticSegmentCollider

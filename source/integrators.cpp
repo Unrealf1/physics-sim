@@ -45,7 +45,7 @@ namespace Physics {
         glm::vec2 acceleration = total_force / item.mass;
         glm::vec2 new_position = item.position + dt * item.speed;
         glm::vec2 new_speed = item.speed + dt * acceleration;
-        float rotational_acceleration = total_torque / item.moment_of_inertia;
+        float rotational_acceleration = total_torque / item.inertia;
         float new_rotation_speed = item.rotation_speed + dt * rotational_acceleration;
         float new_orientation = item.orientation + dt * item.rotation_speed;
 
@@ -53,7 +53,7 @@ namespace Physics {
             item.mass,
             new_position,
             new_speed,
-            item.moment_of_inertia,
+            item.inertia,
             new_orientation,
             new_rotation_speed,
             item.id

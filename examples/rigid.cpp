@@ -44,10 +44,11 @@ int main(int, char *[]) {
     
     Visualizer v(w);
     v.set_simulation_rectangle(sim.get_simulation_rectangle());
-    std::jthread phys_thread(make_physics_thread(&sim, { .fps_limit = 500.0f } ));
+    std::jthread phys_thread(make_physics_thread(&sim, { .physics_step = 1.0f/300.0f, .fps_limit = 500.0f  } ));
 
     bool quit = false;
     SDL_Event event;
+    auto collision_detector = Physics::SimpleCollisionDetector<sim_obj_t>(sim.get_simulation_rectangle());
     while(!quit){
         while(SDL_PollEvent(&event)){
             switch(event.type){
@@ -57,6 +58,28 @@ int main(int, char *[]) {
             }
         }
         auto frame_objects = sim.get_objects();
+        const auto collisions = collision_detector.detect_collisions(frame_objects, {});
+        bool sleep = false;
+        for (size_t i = 0; i < frame_objects.size(); ++i) {
+            const auto& obj = frame_objects[i];
+            const auto& col = collisions[i];
+            for (const auto& collided : col.objects) {
+                //sleep = true;
+                auto [collision_point1, collision_point2, collision_normal] = obj.m_collider.get_collision_points_and_normal(collided.get().m_collider);
+                v.draw_circle(collision_point1, 7.0f, {255, 0, 0, 255});
+                v.draw_circle(collision_point2, 7.0f, {255, 0, 0, 255});
+                v.draw_line(collision_point1, collision_point1 + collision_normal, {0, 0, 255, 255});
+                spdlog::info("point1: {},{}; point2: {},{}; normal: {},{}",
+                        collision_point1.x, 
+                        collision_point1.y, 
+                        collision_point2.x, 
+                        collision_point2.y, 
+                        collision_normal.x,
+                        collision_normal.y
+                );
+            }
+        }
+
         auto& o = frame_objects[0];
         for (const auto& item : frame_objects) {
             auto points = item.m_collider.get_world_points();
@@ -79,6 +102,9 @@ int main(int, char *[]) {
 
         v.finish_frame();
         std::this_thread::sleep_for(10ms);
+        if (sleep) {
+            std::this_thread::sleep_for(8s);
+        }
     }
     phys_thread.request_stop();
     return 0;

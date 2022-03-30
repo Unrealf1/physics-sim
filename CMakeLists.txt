@@ -17,6 +17,7 @@ CPMAddPackage(
     "SDL_X11 ON"
   URL "https://www.libsdl.org/release/SDL2-2.0.18.zip"
 )
+CPMAddPackage("gl:libeigen/eigen@3.4.0#3.4.0")
 
 CPMAddPackage("gh:gabime/spdlog@1.9.2")
 
@@ -33,7 +34,7 @@ file(GLOB_RECURSE SOURCES . source/*.cpp)
 add_library(lib STATIC ${SOURCES})
 target_include_directories(lib PUBLIC source)
 target_link_libraries(lib PRIVATE project_options project_warnings)
-target_link_libraries(lib PUBLIC SDL2 SDL2::SDL2main spdlog glm)
+target_link_libraries(lib PUBLIC SDL2 SDL2::SDL2main spdlog glm eigen)
 
 add_executable(small examples/small.cpp)
 target_link_libraries(small lib)
