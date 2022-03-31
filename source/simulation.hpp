@@ -198,9 +198,6 @@ namespace Physics {
                 // velocity of the collision point on a given body
                 auto vp1 = v1 + scalar_cross(w1, r1);
                 auto vp2 = v2 + scalar_cross(w2, r2);
-                //if (this_penetrated) {
-                //    n = -n;
-                //}
                 
                 // relative velocity of the points
                 auto vp = vp1 - vp2;
@@ -216,8 +213,6 @@ namespace Physics {
                 float rn1 = cross(r1, n);
                 float rn2 = cross(r2, n);
                 float impulse_strength = (-(1 + elasticity) * glm::dot(vp, n)) / (1 / m1 + 1 / m2 + rn1*rn1/i1 + rn2*rn2/i2);
-                //float impulse_sign = this_penetrated ? -1.0f : 1.0f;
-                //impulse_strength *= impulse_sign;
                 return { impulse_strength * n / m1, (cross(r1, impulse_strength * n) / i1) };
             };
 
@@ -245,10 +240,6 @@ namespace Physics {
                 
                 auto [dv, dw] = resolve_collision(n, m1, m2, i1, i2, v1, v2, w1, w2, r1, r2, 0.5f, this_penetrated);
 
-                spdlog::info("i: {}; dw: {};; m: {}; dv: {},{}", i1, dw, m1, dv.x, dv.y);
-                if (am_penetrator) {
-                    //dw *= -1.0f;
-                }
                 copy.m_phys_item.speed += dv;
                 copy.m_phys_item.rotation_speed += dw;
 #ifdef _DEBUG                
@@ -279,7 +270,7 @@ namespace Physics {
                 auto r1 = collision_point - copy.m_phys_item.position;
                 auto r2 = n;
                 
-                auto [dv, dw] = resolve_collision(n, m1, m2, i1, i2, v1, v2, w1, w2, r1, r2, 0.3f, false);
+                auto [dv, dw] = resolve_collision(n, m1, m2, i1, i2, v1, v2, w1, w2, r1, r2, 0.9f, false);
 
                 copy.m_phys_item.speed += dv;
                 copy.m_phys_item.rotation_speed += dw;
@@ -304,7 +295,7 @@ namespace Physics {
                 auto r1 = collision_point - copy.m_phys_item.position;
                 auto r2 = n;
                 
-                auto [dv, dw] = resolve_collision(n, m1, m2, i1, i2, v1, v2, w1, w2, r1, r2, 0.3f, false);
+                auto [dv, dw] = resolve_collision(n, m1, m2, i1, i2, v1, v2, w1, w2, r1, r2, 0.9f, false);
 
                 copy.m_phys_item.speed += dv;
                 copy.m_phys_item.rotation_speed += dw;

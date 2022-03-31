@@ -49,7 +49,7 @@ int main(int, char *[]) {
     auto& p1 = sim.get_point_ref(ref1);
     auto& p2 = sim.get_point_ref(ref2);
     auto& p3 = sim.get_point_ref(ref3);
-    auto& p4 = sim.get_point_ref(ref4);
+    auto& p4 = sim.get_point_ref(ref4, {15, 15});
     auto& p5 = sim.get_point_ref({170.0f, 0.0f});
 
     struct spring_info {
@@ -98,8 +98,8 @@ int main(int, char *[]) {
 
         auto draw_spring = [&v](glm::vec2 from, glm::vec2 to, float initial_length) {
             float num_iters = initial_length / 15.0f;
-            v.draw_circle(from, 5.0f, {0, 128, 128, 255});
-            v.draw_circle(to, 5.0f, {0, 128, 128, 255});
+            v.draw_circle(from, 3.0f, {0, 128, 128, 255});
+            v.draw_circle(to, 3.0f, {0, 128, 128, 255});
             float length = glm::distance(from, to);
             float step = length / (num_iters + 2.0f);
             float offset = 0.0f;

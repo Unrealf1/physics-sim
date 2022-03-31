@@ -88,7 +88,7 @@ inline Physics::SimulationObject<Physics::PolygonCollider> create_regular_polygo
     }
     Physics::PolygonCollider collider = {{position}, vertices};
     Physics::PhysicsItem item = {mass, collider.m_position, velocity, 1.0f, 0.0f, rot_velocity};
-    item.inertia = item.mass * radius * radius;
+    item.inertia = item.mass * radius * radius / 6.0f * (2.0f + std::cos( angle_step ));
     return {collider, item};
 }
 

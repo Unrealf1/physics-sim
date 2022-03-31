@@ -37,13 +37,13 @@ int main(int, char *[]) {
     Window w(p);
     
     Physics::Simulation<sim_obj_t, Physics::SemiImplicitEuler, Physics::SimpleCollisionDetector<sim_obj_t>> sim({400, 280});
-    //sim.add_force(Physics::Forces::earth_gravitation());
+    sim.add_force(Physics::Forces::earth_gravitation());
     //sim.add_force(Physics::Forces::damping(0.15f));
 
-    float r1 = 40.0f;
-    auto obj1 = create_regular_polygon(4, r1, {205, 140}, 2000.0f, {0.0f, 0.0f}, 0.0f);
-    float r2 = 20.0f;
-    auto obj2 = create_regular_polygon(4, r2, {200, 50}, 1.0f, {0.0f, 100.0f}, 2.0f);
+    float r1 = 10.0f;
+    auto obj1 = create_regular_polygon(3, r1, {205, 140}, 2.0f, {0.0f, 0.0f}, 0.0f);
+    float r2 = 10.0f;
+    auto obj2 = create_regular_polygon(3, r2, {300, 150}, 1.0f, {-100.0f, 0.0f}, 2.0f);
     auto ref2 = sim.add_circle(obj1);
     auto ref1 = sim.add_circle(obj2);
 
