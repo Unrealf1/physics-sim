@@ -87,7 +87,7 @@ inline Physics::SimulationObject<Physics::PolygonCollider> create_regular_polygo
         );
     }
     Physics::PolygonCollider collider = {{position}, vertices};
-    Physics::PhysicsItem item = {1.0f, collider.m_position, velocity, 1.0f, 0.0f, rot_velocity};
+    Physics::PhysicsItem item = {mass, collider.m_position, velocity, 1.0f, 0.0f, rot_velocity};
     item.inertia = item.mass * radius * radius;
     return {collider, item};
 }

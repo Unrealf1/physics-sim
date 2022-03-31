@@ -243,7 +243,7 @@ namespace Physics {
                 auto r1 = collision_point - copy.m_phys_item.position;
                 auto r2 = collision_point - collided_obj.m_phys_item.position;
                 
-                auto [dv, dw] = resolve_collision(n, m1, m2, i1, i2, v1, v2, w1, w2, r1, r2, 0.9f, this_penetrated);
+                auto [dv, dw] = resolve_collision(n, m1, m2, i1, i2, v1, v2, w1, w2, r1, r2, 0.5f, this_penetrated);
 
                 spdlog::info("i: {}; dw: {};; m: {}; dv: {},{}", i1, dw, m1, dv.x, dv.y);
                 if (am_penetrator) {
