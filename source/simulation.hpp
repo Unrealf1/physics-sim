@@ -50,7 +50,11 @@ namespace Physics {
                 : m_object_ref(obj), m_offset(offset) {}
 
             glm::vec2 get() const override {
-                return m_object_ref.get().m_phys_item.position + m_offset;
+                auto& ref = m_object_ref.get();
+                float cos = std::cos(ref.m_phys_item.orientation);
+                float sin = std::sin(ref.m_phys_item.orientation);
+                auto rotate = [&ref, sin, cos](const glm::vec2& vertex) -> glm::vec2 { return {vertex.x * cos - vertex.y * sin, vertex.y * cos + vertex.x * sin}; };
+                return ref.m_phys_item.position + rotate(m_offset);
             }
         private:
             ObjectReference m_object_ref;
