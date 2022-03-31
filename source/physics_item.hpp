@@ -29,6 +29,9 @@ namespace Physics {
     };
 
     struct FixedPointReference : public PointReference {
+        FixedPointReference(const glm::vec2 point) : m_point(point) {
+
+        }
         glm::vec2 get() const override {
             return m_point;
         }

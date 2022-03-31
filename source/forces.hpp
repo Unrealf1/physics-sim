@@ -51,7 +51,10 @@ namespace Physics {
             auto calc = [=](const PhysicsItem& item) {
                 return - k * item.speed;
             };
-            return { calc };
+            auto torque = [=](const PhysicsItem& item) {
+                return - k * item.rotation_speed;
+            };
+            return { calc, torque };
         }
         
         Force spring(

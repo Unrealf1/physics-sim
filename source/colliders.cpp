@@ -14,6 +14,14 @@ bool CircleCollider::is_colliding_y(float border) const {
     return std::abs(m_position.y - border) <= m_radius;
 }
 
+glm::vec2 CircleCollider::get_x_collision(float border) const {
+    return {border, m_position.y};
+}
+
+glm::vec2 CircleCollider::get_y_collision(float border) const {
+    return {m_position.x, border};
+}
+
 bool CircleCollider::is_colliding(const CircleCollider& other) const {
     auto diff = other.m_position - m_position;
     auto square_dist = diff.x * diff.x + diff.y * diff.y;
@@ -34,12 +42,12 @@ bool CircleCollider::is_colliding(glm::vec2 ray_start, glm::vec2 ray_point) cons
     return (D > b) | (D > -b);
 }
 
-std::tuple<glm::vec2, glm::vec2, glm::vec2> CircleCollider::get_collision_points_and_normal(const CircleCollider& other) const {
+std::tuple<glm::vec2, glm::vec2, glm::vec2, bool> CircleCollider::get_collision_points_and_normal(const CircleCollider& other) const {
     //TODO: optimize
     auto direction = glm::normalize(other.m_position - m_position);
     auto my_point = m_position + direction * m_radius;
     auto other_point = other.m_position - direction * other.m_radius;
-    return { my_point, other_point, direction };
+    return { my_point, other_point, direction, true };
 }
 
 // StaticSegmentCollider

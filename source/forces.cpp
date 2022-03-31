@@ -24,9 +24,20 @@ namespace Physics { namespace Forces {
             return glm::normalize(diff) * power;                
         };
         
-        //TODO:
-        auto torque = [](const PhysicsItem& item) {
-            return 0.0f;
+        //TODO: optimize/rework forces entirely
+        auto torque = [calc, &first_point, &second_point, first, second](const PhysicsItem& item) {
+            auto cross = [](const auto& vec1, const auto& vec2) -> float {
+                return (vec1.x * vec2.y) - (vec1.y * vec2.x);
+            };
+            auto force = calc(item);
+            glm::vec2 at;
+            if (item.id == second) {
+                at = second_point.get();
+            } else {
+                at = first_point.get();
+            }
+
+            return cross(at - item.position, force);
         };
 
         auto filt = [=](const PhysicsItem& item) {

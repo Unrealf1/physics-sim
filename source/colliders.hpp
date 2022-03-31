@@ -60,7 +60,9 @@ namespace Physics {
         bool is_colliding_x(float border) const; 
         bool is_colliding_y(float border) const; 
         bool is_colliding(const CircleCollider& other) const;
-        std::tuple<glm::vec2, glm::vec2, glm::vec2> get_collision_points_and_normal(const CircleCollider& other) const;
+        std::tuple<glm::vec2, glm::vec2, glm::vec2, bool> get_collision_points_and_normal(const CircleCollider& other) const;
+        glm::vec2 get_x_collision(float border) const;
+        glm::vec2 get_y_collision(float border) const;
         bool is_colliding(glm::vec2 ray_start, glm::vec2 ray_point) const;
 
     public:
@@ -72,7 +74,9 @@ namespace Physics {
         bool is_colliding_y(float border) const; 
         //bool is_colliding(const CircleCollider& other) const;
         bool is_colliding(const PolygonCollider& other) const;
-        std::tuple<glm::vec2, glm::vec2, glm::vec2> get_collision_points_and_normal(const PolygonCollider& other) const;
+        std::tuple<glm::vec2, glm::vec2, glm::vec2, bool> get_collision_points_and_normal(const PolygonCollider& other) const;
+        glm::vec2 get_x_collision(float border) const;
+        glm::vec2 get_y_collision(float border) const;
         bool is_colliding(glm::vec2 ray_start, glm::vec2 ray_point) const;
         std::vector<glm::vec2> get_world_points() const;
 

@@ -1,6 +1,8 @@
 #pragma once
 
+#include <bits/ranges_algo.h>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <ranges>
 #include <stdexcept>
@@ -23,6 +25,9 @@
 using std::views::iota;
 using std::views::transform;
 using std::ranges::all_of;
+using std::ranges::min_element;
+using std::ranges::max_element;
+
 
 namespace Physics {
     template<typename object_t, Integrator integrator_t, CollisionDetector<object_t> collision_detector_t>
@@ -172,20 +177,51 @@ namespace Physics {
         }
 
         object_t process_object(float dt, object_t copy, const Collision<object_t>& collision) {
+            auto cross = [](const auto& vec1, const auto& vec2) -> float {
+                return (vec1.x * vec2.y) - (vec1.y * vec2.x);
+            };
+            
+            auto scalar_cross = [](float scalar, const auto& vec) {
+                return decltype(vec){-vec.y, vec.x} * scalar;
+            };
+            auto resolve_collision = [&cross, &scalar_cross](
+                const auto& n, 
+                auto& m1, auto& m2,
+                auto& i1, auto& i2,
+                auto& v1, auto& v2,
+                auto& w1, auto& w2,
+                auto& r1, auto& r2,
+                float elasticity, bool this_penetrated
+            ) -> std::pair<glm::vec2, float> {
+                // velocity of the collision point on a given body
+                auto vp1 = v1 + scalar_cross(w1, r1);
+                auto vp2 = v2 + scalar_cross(w2, r2);
+                
+                // relative velocity of the points
+                auto vp = vp1 - vp2;
+                
+                // relative normal velocity
+                auto vpn = glm::dot(vp, n);
+
+                if (vpn > 0.0f) {
+                    // bodies are moving away from each other
+                    return {{0.0f, 0.0f}, 0.0f};
+                }
+                
+                float rn1 = cross(r1, n);
+                float rn2 = cross(r2, n);
+                float impulse_strength = (-(1 + elasticity) * glm::dot(vp, n)) / (1 / m1 + 1 / m2 + rn1*rn1/i1 + rn2*rn2/i2);
+
+                //float impulse_sign = this_penetrated ? -1.0f : 1.0f;
+                //impulse_strength *= impulse_sign;
+                return { impulse_strength * n / m1, cross(r1, impulse_strength * n) / i1 };
+            };
+
             // process collisions
             for (const object_t& collided_obj : collision.objects) {
-                auto cross = [](const auto& vec1, const auto& vec2) -> float {
-                    return (vec1.x * vec2.y) - (vec1.y * vec2.x);
-                };
-                
-                auto scalar_cross = [](float scalar, const auto& vec) {
-                    return decltype(vec){-vec.y, vec.x} * scalar;
-                };
 
-                auto [collision_point1, collision_point2, collision_normal] = copy.m_collider.get_collision_points_and_normal(collided_obj.m_collider);
-                
-                // Maybe just check if the point is in the list?..
-                bool this_penetrated = glm::distance(collision_point1, copy.m_phys_item.position) < glm::distance(collision_point2, copy.m_phys_item.position);
+                auto [collision_point1, collision_point2, collision_normal, am_penetrator] = copy.m_collider.get_collision_points_and_normal(collided_obj.m_collider);
+                bool this_penetrated = !am_penetrator;
                 auto& collision_point = collision_point1;
                 
                 // Impulse solution
@@ -202,76 +238,11 @@ namespace Physics {
 
                 auto r1 = collision_point - copy.m_phys_item.position;
                 auto r2 = collision_point - collided_obj.m_phys_item.position;
-
-                // velocity of the collision point on a given body
-                auto vp1 = v1 + scalar_cross(w1, r1);
-                auto vp2 = v2 + scalar_cross(w2, r2);
                 
-                // relative velocity of the points
-                auto vp = vp1 - vp2;
-                
-                // relative normal velocity
-                auto vpn = glm::dot(vp, n);
-                /*if (this_penetrated) {
-                    vpn *= -1.0f;
-                }*/
+                auto [dv, dw] = resolve_collision(n, m1, m2, i1, i2, v1, v2, w1, w2, r1, r2, 0.1f, this_penetrated);
 
-                if (vpn > 0.0f) {
-                    // bodies are moving away from each other
-                    continue;
-                }
-                
-                float elasticity = 0.3f;
-                float rn1 = cross(r1, n);
-                float rn2 = cross(r2, n);
-                float impulse_strength = (-(1 + elasticity) * glm::dot(vp, n)) / (1 / m1 + 1 / m2 + rn1*rn1/i1 + rn2*rn2/i2);
-
-                float impulse_sign = this_penetrated ? -1.0f : 1.0f;
-                impulse_strength *= impulse_sign;
-                copy.m_phys_item.speed += impulse_strength * n / m1;
-                copy.m_phys_item.rotation_speed += cross(r1, impulse_strength * n) / i1;
-
-                // Constraints solution
-                /*bool first_closer = glm::distance(collision_point1, copy.m_phys_item.position) < glm::distance(collision_point2, copy.m_phys_item.position);
-
-                auto& my_p = first_closer ? collision_point2 : collision_point1;
-                auto& other_p = !first_closer ? collision_point2 : collision_point1;
-                auto pen_distance = glm::distance(collision_point1, collision_point2); //TODO: is this right?
-                pen_distance = 1.0f;
-
-                auto& n = collision_normal;
-                auto m1 = copy.m_phys_item.mass;
-                auto m2 = collided_obj.m_phys_item.mass;
-                auto i1 = copy.m_phys_item.inertia;
-                auto i2 = collided_obj.m_phys_item.inertia;
-
-                auto v1 = copy.m_phys_item.speed;
-                auto v2 = collided_obj.m_phys_item.speed;
-                auto w1 = copy.m_phys_item.rotation_speed;
-                auto w2 = collided_obj.m_phys_item.rotation_speed;
-                
-                Eigen::DiagonalMatrix<float, 6> M(1.0f/m1, 1.0f/m1, 1.0f/i1, 1.0f/m2, 1.0f/m2, 1.0f/i2);
-
-                auto V = Eigen::Vector<float, 6>(v1.x, v1.y, w1, v2.x, v2.y, w2).transpose();
-                
-                auto cross = [](const auto& vec1, const auto& vec2) -> float {
-                    return (vec1.x * vec2.y) - (vec1.y * vec2.x);
-                };
-
-                auto ra = my_p - copy.m_phys_item.position;
-                auto rb = other_p - collided_obj.m_phys_item.position;
-                
-                auto J = Eigen::Vector<float, 6>{n.x, n.y, cross(ra, n), -n.x, -n.y, -cross(rb, n)}.transpose();                
-                auto bias = 0.5f * std::max(pen_distance - 0.1f, 0.0f) / dt;
-                
-                auto A = J * M * J.transpose();
-                auto B = -bias - J.dot(V);
-                auto lambda = B / float(A);
-                auto dV = M * J.transpose() * lambda;
-
-                copy.m_phys_item.speed.x += dV[0];
-                copy.m_phys_item.speed.y += dV[1];
-                copy.m_phys_item.rotation_speed += dV[2];*/
+                copy.m_phys_item.speed += dv;
+                copy.m_phys_item.rotation_speed += dw;
 #ifdef _DEBUG                
                 if (copy.m_phys_item.speed != copy.m_phys_item.speed) {
                     spdlog::warn("m1: {}, m2: {}, proj_len_1: {}, proj_len_2: {}, dp: {}, {}", m1, m2, proj_len_1, proj_len_2, dp.x, dp.y);
@@ -279,31 +250,56 @@ namespace Physics {
 #endif
             }
 
-            for (const StaticCollider* st_ptr : collision.statics) {
-                const auto& st = *st_ptr;
-                auto is_unnecessary = [&]{
-                    auto new_item = m_integrator.update(dt / 20.0f, copy.m_phys_item);
-                    auto cur_dist = st.distance(copy.m_phys_item.position);
-                    auto new_dist = st.distance(new_item.position);
-                    return new_dist > cur_dist;
-                };
-                if (is_unnecessary()) {
-                    continue;
-                }
-                auto collision_point = st.collision_point(copy.m_collider);
-                auto change_direction = glm::normalize(collision_point - copy.m_collider.m_position);
-                auto proj_changed_len = glm::dot(change_direction, copy.m_phys_item.speed);
-                auto proj_changed = change_direction * proj_changed_len;
-                copy.m_phys_item.speed -= proj_changed * 2.0f;
-            }
-
             if ((copy.m_collider.is_colliding_x(m_simulation_rectangle.x) & (copy.m_phys_item.speed.x > 0.0f))
                     | (copy.m_collider.is_colliding_x(0.0f) & (copy.m_phys_item.speed.x < 0.0f))) {
-                copy.m_phys_item.speed.x *= -1;   
+                // Impulse solution
+                auto n = -glm::normalize(glm::vec2{copy.m_phys_item.speed.x, 0.0f});
+                auto m1 = copy.m_phys_item.mass;
+                auto m2 = std::numeric_limits<float>::max() / 1000.0f;
+                auto i1 = copy.m_phys_item.inertia;
+                auto i2 = std::numeric_limits<float>::max() / 1000.0f;
+
+                auto v1 = copy.m_phys_item.speed;
+                auto v2 = glm::vec2{0.0f, 0.0f};
+                auto w1 = copy.m_phys_item.rotation_speed;
+                auto w2 = 0.0f;
+
+                bool right = copy.m_phys_item.speed.x > 0.0f;
+                float border = right ? m_simulation_rectangle.x : 0.0f;
+                glm::vec2 collision_point = copy.m_collider.get_x_collision(border);
+
+                auto r1 = collision_point - copy.m_phys_item.position;
+                auto r2 = n;
+                
+                auto [dv, dw] = resolve_collision(n, m1, m2, i1, i2, v1, v2, w1, w2, r1, r2, 0.3f, false);
+
+                copy.m_phys_item.speed += dv;
+                copy.m_phys_item.rotation_speed += dw;
             }
             if ((copy.m_collider.is_colliding_y(m_simulation_rectangle.y) & (copy.m_phys_item.speed.y > 0.0f))
                     | (copy.m_collider.is_colliding_y(0.0f) & (copy.m_phys_item.speed.y < 0.0f))) {
-                copy.m_phys_item.speed.y *= -1;   
+                auto n = -glm::normalize(glm::vec2{0.0f, copy.m_phys_item.speed.y});
+                auto m1 = copy.m_phys_item.mass;
+                auto m2 = std::numeric_limits<float>::max() / 1000.0f;
+                auto i1 = copy.m_phys_item.inertia;
+                auto i2 = std::numeric_limits<float>::max() / 1000.0f;
+
+                auto v1 = copy.m_phys_item.speed;
+                auto v2 = glm::vec2{0.0f, 0.0f};
+                auto w1 = copy.m_phys_item.rotation_speed;
+                auto w2 = 0.0f;
+
+                bool down = copy.m_phys_item.speed.y > 0.0f;
+                float border = down ? m_simulation_rectangle.y : 0.0f;
+                glm::vec2 collision_point = copy.m_collider.get_y_collision(border);
+
+                auto r1 = collision_point - copy.m_phys_item.position;
+                auto r2 = n;
+                
+                auto [dv, dw] = resolve_collision(n, m1, m2, i1, i2, v1, v2, w1, w2, r1, r2, 0.3f, false);
+
+                copy.m_phys_item.speed += dv;
+                copy.m_phys_item.rotation_speed += dw;
             }
 
             copy.m_phys_item = m_integrator.update(dt, copy.m_phys_item);

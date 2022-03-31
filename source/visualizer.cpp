@@ -35,6 +35,7 @@ void Visualizer::draw_line(glm::vec2 from, glm::vec2 to, color_t color) {
     SDL_SetRenderDrawColor(m_renderer, color.r, color.g, color.b, color.a);
     SDL_RenderDrawLineF(m_renderer, from.x, from.y, to.x, to.y);
 }
+
 void Visualizer::draw_circle(glm::vec2 position, float radius, color_t color) {
     ColorRestorer cr(m_renderer);
     SDL_SetRenderDrawColor(m_renderer, color.r, color.g, color.b, color.a);

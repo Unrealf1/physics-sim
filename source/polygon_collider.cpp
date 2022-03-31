@@ -46,6 +46,48 @@ bool PolygonCollider::is_colliding_y(float border) const {
     return (*min) * (*max) < 0.0f;
 }
 
+glm::vec2 PolygonCollider::get_x_collision(float border) const {
+    auto points = get_world_points();
+    float min_diff = std::numeric_limits<float>::max();
+    for (const auto& p : points) {
+        float key = std::abs(p.x  - border);
+        if (key < min_diff) {
+            min_diff = key;
+        }
+    }
+    float num = 0.0f;
+    glm::vec2 point = {0.0f, 0.0f};
+    for (const auto& p : points) {
+        float key = std::abs(p.x  - border);
+        if (key - min_diff < std::numeric_limits<float>::epsilon() * 2.0f) {
+            point += p;
+            num += 1.0f;
+        }
+    }
+    return point / num;
+}
+
+glm::vec2 PolygonCollider::get_y_collision(float border) const {
+    auto points = get_world_points();
+    float min_diff = std::numeric_limits<float>::max();
+    for (const auto& p : points) {
+        float key = std::abs(p.y  - border);
+        if (key < min_diff) {
+            min_diff = key;
+        }
+    }
+    float num = 0.0f;
+    glm::vec2 point = {0.0f, 0.0f};
+    for (const auto& p : points) {
+        float key = std::abs(p.y  - border);
+        if (key - min_diff < std::numeric_limits<float>::epsilon() * 2.0f) {
+            point += p;
+            num += 1.0f;
+        }
+    }
+    return point / num;
+}
+
 struct Simplex {
     void push(glm::vec2 point) {
         points = {point, points[0], points[1]};
@@ -210,7 +252,6 @@ bool is_inside(const glm::vec2 point, const PointRange& figure) {
     auto cross = [](const auto& f, const auto& s) {
         return f.x * s.y - f.y * s.x;
     };
-    spdlog::error("checking point: {},{}", point.x, point.y);
     float sign = 0.0f;
     {
         glm::vec2 figure_point = *figure.begin();
@@ -219,13 +260,11 @@ bool is_inside(const glm::vec2 point, const PointRange& figure) {
         auto edge = point - previous_point;
         float c = cross(vec, edge);
         sign = c < 0.0f ? -1.0f : 1.0f;
-        spdlog::warn("{},{}; {},{} : {}", edge.x, edge.y, vec.x, vec.y, cross(vec, edge));
     }
     auto previous_point = *figure.begin();
     for (const auto& figure_point : figure | drop(1)) {
         auto vec = point - figure_point;
         auto edge = point - previous_point;
-        spdlog::warn("{},{}; {},{} : {} ({})", edge.x, edge.y, vec.x, vec.y, cross(vec, edge), sign);
         float c = cross(vec, edge);
 
         if (sign * c < 0.0f) {
@@ -233,12 +272,7 @@ bool is_inside(const glm::vec2 point, const PointRange& figure) {
         }
         previous_point = figure_point;  
     }
-    /*std::string str;
-    for (const glm::vec2& p : figure ) {
-        str += std::to_string(p.x) + ", " + std::to_string(p.y) + "; || ";
-    }
-    spdlog::info("point {},{} is inside this figure: {}", point.x, point.y, str);*/
-    
+
     return true;
 }
 
@@ -248,7 +282,6 @@ std::optional<glm::vec2> find_vertex_inside(const PointRange1& points1, const Po
     float num_points = 0.0f;
     for (const auto& p : points1) {
         if (is_inside(p, points2)) {
-            spdlog::info("{},{} is inside!", p.x, p.y);
             num_points += 1.0f;
             final_point += p;
         }
@@ -259,7 +292,7 @@ std::optional<glm::vec2> find_vertex_inside(const PointRange1& points1, const Po
     return {};
 }
 
-std::tuple<glm::vec2, glm::vec2, glm::vec2> PolygonCollider::get_collision_points_and_normal(const PolygonCollider& other) const {
+std::tuple<glm::vec2, glm::vec2, glm::vec2, bool> PolygonCollider::get_collision_points_and_normal(const PolygonCollider& other) const {
     auto other_direction = other.m_position - m_position;
     auto points1 = get_world_points();
     auto points2 = other.get_world_points();
@@ -271,7 +304,6 @@ std::tuple<glm::vec2, glm::vec2, glm::vec2> PolygonCollider::get_collision_point
         }
         return str;
     };
-    spdlog::warn("figures: \n{}\n{}", fig_to_str(points1), fig_to_str(points2));
     auto p1 = find_vertex_inside(points1, points2);
     glm::vec2 penetration_point;
     bool first_penetrating = false;
@@ -284,7 +316,6 @@ std::tuple<glm::vec2, glm::vec2, glm::vec2> PolygonCollider::get_collision_point
         penetration_point = p2.value_or(other.m_position);
     }
     float closeness = std::numeric_limits<float>::max();
-    spdlog::info("penetration point: {},{}", penetration_point.x, penetration_point.y);
     auto& penetrator = first_penetrating ? points1 : points2;
     auto& penetrated = !first_penetrating ? points1 : points2;
     glm::vec2 normal;
@@ -325,7 +356,7 @@ std::tuple<glm::vec2, glm::vec2, glm::vec2> PolygonCollider::get_collision_point
     auto tb = (a.x * (B.y - A.y) - a.y * (B.x - A.x)) / (b.x * a.y - b.y * a.x);
     auto projected_point = B + tb * b;
 
-    return { penetration_point, projected_point, normal };
+    return { penetration_point, projected_point, normal, first_penetrating };
 }
 
 //TODO: ?
