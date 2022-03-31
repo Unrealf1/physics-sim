@@ -1,6 +1,5 @@
 #pragma once
 
-#include <bits/ranges_algo.h>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -14,8 +13,6 @@
 #include <mutex>
 
 #include <spdlog/spdlog.h>
-#include <Eigen/Core>
-#include <Eigen/Dense>
 
 #include "glm/geometric.hpp"
 #include "simulation_object.hpp"
