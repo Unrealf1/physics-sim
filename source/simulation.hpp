@@ -18,6 +18,7 @@
 #include "simulation_object.hpp"
 #include "integrators.hpp"
 #include "collision_detectors.hpp"
+#include "spdlog/common.h"
 
 using std::views::iota;
 using std::views::transform;
@@ -186,17 +187,20 @@ namespace Physics {
                 return decltype(vec){-vec.y, vec.x} * scalar;
             };
             auto resolve_collision = [&cross, &scalar_cross](
-                const auto& n, 
+                auto n, 
                 auto& m1, auto& m2,
                 auto& i1, auto& i2,
                 auto& v1, auto& v2,
                 auto& w1, auto& w2,
                 auto& r1, auto& r2,
-                float elasticity, bool this_penetrated
+                float elasticity, bool this_is_penetrated
             ) -> std::pair<glm::vec2, float> {
                 // velocity of the collision point on a given body
                 auto vp1 = v1 + scalar_cross(w1, r1);
                 auto vp2 = v2 + scalar_cross(w2, r2);
+                //if (this_penetrated) {
+                //    n = -n;
+                //}
                 
                 // relative velocity of the points
                 auto vp = vp1 - vp2;
@@ -204,7 +208,7 @@ namespace Physics {
                 // relative normal velocity
                 auto vpn = glm::dot(vp, n);
 
-                if (vpn > 0.0f) {
+                if (vpn > 0.0f && !this_is_penetrated || vpn < 0.0f && this_is_penetrated) {
                     // bodies are moving away from each other
                     return {{0.0f, 0.0f}, 0.0f};
                 }
@@ -212,10 +216,9 @@ namespace Physics {
                 float rn1 = cross(r1, n);
                 float rn2 = cross(r2, n);
                 float impulse_strength = (-(1 + elasticity) * glm::dot(vp, n)) / (1 / m1 + 1 / m2 + rn1*rn1/i1 + rn2*rn2/i2);
-
                 //float impulse_sign = this_penetrated ? -1.0f : 1.0f;
                 //impulse_strength *= impulse_sign;
-                return { impulse_strength * n / m1, cross(r1, impulse_strength * n) / i1 };
+                return { impulse_strength * n / m1, (cross(r1, impulse_strength * n) / i1) };
             };
 
             // process collisions
@@ -240,8 +243,12 @@ namespace Physics {
                 auto r1 = collision_point - copy.m_phys_item.position;
                 auto r2 = collision_point - collided_obj.m_phys_item.position;
                 
-                auto [dv, dw] = resolve_collision(n, m1, m2, i1, i2, v1, v2, w1, w2, r1, r2, 0.1f, this_penetrated);
+                auto [dv, dw] = resolve_collision(n, m1, m2, i1, i2, v1, v2, w1, w2, r1, r2, 0.9f, this_penetrated);
 
+                spdlog::info("i: {}; dw: {};; m: {}; dv: {},{}", i1, dw, m1, dv.x, dv.y);
+                if (am_penetrator) {
+                    //dw *= -1.0f;
+                }
                 copy.m_phys_item.speed += dv;
                 copy.m_phys_item.rotation_speed += dw;
 #ifdef _DEBUG                

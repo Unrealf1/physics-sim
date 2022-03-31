@@ -29,5 +29,9 @@ namespace Physics {
     public:
         PhysicsItem update(float dt, const PhysicsItem& item);
     };
+    class SemiImplicitEuler : public BasicIntegrator{
+    public:
+        PhysicsItem update(float dt, const PhysicsItem& item);
+    };
 
 }

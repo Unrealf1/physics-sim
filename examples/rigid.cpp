@@ -35,32 +35,15 @@ int main(int, char *[]) {
 
     Window w(p);
     
-    auto regular_polygon = [](size_t num_vertices, float radius, glm::vec2 position, glm::vec2 velocity = {0.0f, 0.0f}, float rot_velocity = 0.0f) -> sim_obj_t {
-        float angle_step = std::numbers::pi_v<float> * 2.0f / float(num_vertices);
-        std::vector<glm::vec2> vertices;
-        vertices.reserve(num_vertices);
-        for (size_t i = 0; i < num_vertices; ++i) {
-            float angle = angle_step * float(i);
-            vertices.emplace_back(
-                    std::cos(angle) * radius,
-                    std::sin(angle) * radius
-            );
-        }
-        Physics::PolygonCollider collider = {{position}, vertices};
-        Physics::PhysicsItem item = {1.0f, collider.m_position, velocity, 1.0f, 0.0f, rot_velocity};
-        return {collider, item};
-    };
-
     Physics::Simulation<sim_obj_t, Physics::ForwardEuler, Physics::SimpleCollisionDetector<sim_obj_t>> sim({400, 280});
     sim.add_force(Physics::Forces::earth_gravitation());
     sim.add_force(Physics::Forces::damping(0.15f));
 
-    auto obj1 = regular_polygon(4, 20, {40, 22}, {0.0f, 0.0f}, 0.0f);
-    obj1.m_phys_item.inertia *=2.0f;
+    auto obj1 = create_regular_polygon(4, 20, {40, 22}, 2.0f, {0.0f, 0.0f}, 0.0f);
     auto ref1 = sim.add_circle(obj1);
-    auto ref2 = sim.add_circle(regular_polygon(4, 20, {77, 35}, {-15.0f, 0.0f}, 1.0f));
-    auto ref3 = sim.add_circle(regular_polygon(5, 22, {60, 60}, {0.0f, 0.0f}, 1.0f));
-    auto ref4 = sim.add_circle(regular_polygon(7, 25, {115, 85}, {10.0f, 0.0f}, -1.5f));
+    auto ref2 = sim.add_circle(create_regular_polygon(4, 20, {77, 35},1.0f, {-15.0f, 0.0f}, 1.0f));
+    auto ref3 = sim.add_circle(create_regular_polygon(5, 22, {60, 60}, 1.0f, {0.0f, 0.0f}, 1.0f));
+    auto ref4 = sim.add_circle(create_regular_polygon(7, 25, {115, 85}, 1.0f, {10.0f, 0.0f}, -1.5f));
 
     auto& p0 = sim.get_point_ref({150.0f, 0.0f});
     auto& p1 = sim.get_point_ref(ref1);

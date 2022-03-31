@@ -4,7 +4,9 @@
 #include <stop_token>
 #include <limits>
 
+#include "colliders.hpp"
 #include "simulation.hpp"
+#include "simulation_object.hpp"
 
 
 using namespace std::chrono_literals;
@@ -68,6 +70,25 @@ auto make_physics_thread(Sim* simulation, PhysicsParameters parameters) {
 inline Physics::SimulationObject<Physics::CircleCollider> create_sim_object(glm::vec2 position, glm::vec2 velocity, float radius, float mass) {
     Physics::CircleCollider collider = {{ position }, radius};
     Physics::PhysicsItem item = {mass, collider.m_position, velocity};
+    return {collider, item};
+}
+
+inline Physics::SimulationObject<Physics::PolygonCollider> create_regular_polygon(
+        size_t num_vertices, float radius, glm::vec2 position, float mass = 1.0f, glm::vec2 velocity = {0.0f, 0.0f}, float rot_velocity = 0.0f
+) {
+    float angle_step = std::numbers::pi_v<float> * 2.0f / float(num_vertices);
+    std::vector<glm::vec2> vertices;
+    vertices.reserve(num_vertices);
+    for (size_t i = 0; i < num_vertices; ++i) {
+        float angle = angle_step * float(i);
+        vertices.emplace_back(
+                std::cos(angle) * radius,
+                std::sin(angle) * radius
+        );
+    }
+    Physics::PolygonCollider collider = {{position}, vertices};
+    Physics::PhysicsItem item = {1.0f, collider.m_position, velocity, 1.0f, 0.0f, rot_velocity};
+    item.inertia = item.mass * radius * radius;
     return {collider, item};
 }
 
