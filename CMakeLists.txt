@@ -15,6 +15,7 @@ CPMAddPackage(
   VERSION   "2.0.18"
   OPTIONS
     "SDL_X11 ON"
+    "SDL_WAYLAND OFF"
   URL "https://www.libsdl.org/release/SDL2-2.0.18.zip"
 )
 
