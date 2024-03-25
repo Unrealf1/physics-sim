@@ -25,6 +25,9 @@ namespace Physics {
     };
 
     struct SimpleCollisionDetector {
+        template<typename... Args>
+        SimpleCollisionDetector(const Args&...) {}
+
         std::vector<Collision> detect_collisions(
                 const std::vector<SimulationObject>& objects, 
                 const std::vector<std::unique_ptr<StaticCollider>>& statics

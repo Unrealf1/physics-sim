@@ -140,7 +140,14 @@ int main(int, char *[]) {
 
     Visualizer v(w);
     v.set_simulation_rectangle(sim.get_simulation_rectangle());
-    std::jthread phys_thread(make_physics_thread(&sim, { .physics_step = 0.005f, .fps_limit = 0.0f, .start_delay = 200ms, .measure_period = 50 } ));
+    std::jthread phys_thread(make_physics_thread(&sim, {
+        .physics_step = 1.0f / 120.0f,
+        .fps_limit = 0.0f,
+        .start_delay = 200ms,
+        .measure_period = 50,
+        .frames_to_run = 10'000,
+        .perfomance_report_filename = "fps.tsv"
+    }));
 
     bool quit = false;
     SDL_Event event;
@@ -152,6 +159,11 @@ int main(int, char *[]) {
                     break;
             }
         }
+
+        if (sim.is_stopped()) {
+            quit = true;
+        }
+
         auto frame_objects = sim.get_objects();
         for (const auto& item : frame_objects) {
             size_t section_idx = 0;

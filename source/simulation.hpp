@@ -47,6 +47,14 @@ namespace Physics {
             m_static_colliders.push_back(std::move(collider));
         }
 
+        void stop() {
+            m_stopped = true;
+        }
+
+        bool is_stopped() const {
+            return m_stopped;
+        }
+
         void step(float dt) {
             const auto& last_buffer = get_last_buffer();
             auto& active_buffer = get_active_buffer();
@@ -96,6 +104,7 @@ namespace Physics {
                         auto changed_v = (2 * m2 * other_2 + other_1 * dm) / sm;
 
                         copy.m_phys_item.speed = proj_1 + changed_v;
+                        copy.m_phys_item.speed *= 0.99f;
                         if (copy.m_phys_item.speed != copy.m_phys_item.speed) {
                             spdlog::warn("m1: {}, m2: {}, proj_len_1: {}, proj_len_2: {}, dp: {}, {}", m1, m2, proj_len_1, proj_len_2, dp.x, dp.y);
                         }
@@ -149,6 +158,7 @@ namespace Physics {
         std::vector<std::unique_ptr<StaticCollider>> m_static_colliders;
         integrator_t m_integrator;
         uint8_t m_active_index = 0; 
+        volatile bool m_stopped = false;
         glm::vec2 m_simulation_rectangle;
 
         objects_t& get_active_buffer() {
