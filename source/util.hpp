@@ -30,7 +30,8 @@ void physics_thread(std::stop_token stoken, Sim* simulation, const PhysicsParame
     auto frame_duration = std::chrono::milliseconds(
             fps_limit > 0.0f ? uint64_t(1000.0f / fps_limit) : 0
     );
-    auto last_frame = std::chrono::steady_clock::now() - 10ms;
+    const auto simulation_start = std::chrono::steady_clock::now();
+    auto last_frame = simulation_start - 10ms;
     float fps = 0.0f;
     uint64_t frame = 1;
     auto last_measure_time = std::chrono::steady_clock::now();
@@ -54,12 +55,11 @@ void physics_thread(std::stop_token stoken, Sim* simulation, const PhysicsParame
             float local_fps = float(measure_period) * 1000.0f / ms;
             fps = local_fps;
             last_measure_time = now;
-            spdlog::info("[{}] fps: {}", frame, fps);
             if (keep_perfomance_report) {
                 perf_history.push_back({frame, fps});
             }
+            spdlog::info("[{}] fps: {:.2f}; time scale: {:.2f}", frame, fps, physics_step > 0.0f ? physics_step / (1.0f / fps) : 1.0f);
         }
-
         auto since_last_frame = now - last_frame;
         auto dt = physics_step > 0.0f 
             ? physics_step 
@@ -84,6 +84,9 @@ void physics_thread(std::stop_token stoken, Sim* simulation, const PhysicsParame
             perf_out << item.frame_num << '\t' << item.fps << '\n';
         }
     }
+    auto finished_at = std::chrono::steady_clock::now();
+    float ms = float(std::chrono::duration_cast<std::chrono::milliseconds>(finished_at - simulation_start).count());
+    spdlog::info("Finished simulation in: {:.2f}ms", ms);
 }
 
 template<typename Sim>

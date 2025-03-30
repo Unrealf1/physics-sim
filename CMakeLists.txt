@@ -8,7 +8,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 SET(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-incompatible-pointer-types")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Ofast")
+
 include(cmake/CPM.cmake)
+
+find_package(TBB REQUIRED COMPONENTS tbb)
+
 CPMAddPackage("gh:g-truc/glm@0.9.9.8#0.9.9.8")
 CPMAddPackage(
   NAME      "SDL2"         
@@ -33,20 +39,20 @@ enable_sanitizers(project_options)
 file(GLOB_RECURSE SOURCES . source/*.cpp)
 add_library(lib STATIC ${SOURCES})
 target_include_directories(lib PUBLIC source)
-target_link_libraries(lib PUBLIC project_options project_warnings)
-target_link_libraries(lib PUBLIC SDL2 SDL2::SDL2main spdlog glm)
+target_link_libraries(lib PRIVATE project_options project_warnings)
+target_link_libraries(lib PUBLIC SDL2 SDL2::SDL2main spdlog glm tbb)
 
-add_executable(small examples/small.cpp)
-target_link_libraries(small lib)
-
-add_executable(random examples/random.cpp)
-target_link_libraries(random lib)
+#add_executable(small examples/small.cpp)
+#target_link_libraries(small lib)
+#
+#add_executable(random examples/random.cpp)
+#target_link_libraries(random lib)
 
 add_executable(galton_board examples/galton_board.cpp)
 target_link_libraries(galton_board lib)
 
-add_executable(billiard examples/billiard.cpp)
-target_link_libraries(billiard lib)
+#add_executable(billiard examples/billiard.cpp)
+#target_link_libraries(billiard lib)
 
 if (WIN32)
     add_custom_command(TARGET galton_board POST_BUILD 
@@ -54,3 +60,4 @@ if (WIN32)
             "${CMAKE_BINARY_DIR}\\_deps\\sdl2-build\\SDL2.dll" 
             "${CMAKE_BINARY_DIR}\\SDL2.dll")
 endif()
+

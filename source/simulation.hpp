@@ -150,6 +150,10 @@ namespace Physics {
             return m_simulation_rectangle;
         }
 
+        const auto& get_collision_detector() const {
+            return m_collision_detector;
+        }
+
     private:
         mutable std::mutex m_objects_lock;
         objects_t m_objects_arrays[2];

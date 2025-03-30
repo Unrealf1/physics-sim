@@ -50,7 +50,7 @@ int main(int, char *[]) {
     uint32_t sim_width = 1000;
     uint32_t sim_height = 900;
 
-    Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<9>> sim({sim_width, sim_height});
+    Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<50>> sim({sim_width, sim_height});
     //Physics::Simulation<Physics::ForwardEuler, Physics::OnlyStaticCollisionDetector> sim({sim_width, sim_height});
     sim.add_force(Physics::earth_gravitation());
     sim.add_force(Physics::damping(0.17f));
@@ -165,6 +165,34 @@ int main(int, char *[]) {
         }
 
         auto frame_objects = sim.get_objects();
+
+//#define DRAW_BUCKET_COLLIDER 1
+#ifdef DRAW_BUCKET_COLLIDER
+        // TODO: hide behind consexpr branch only for bucket collision detectors
+        const auto& collision_detector = sim.get_collision_detector();
+        const auto bucket_len = glm::vec2(
+            collision_detector.m_max_x - collision_detector.m_min_x,
+            collision_detector.m_max_y - collision_detector.m_min_y
+        ) / float(collision_detector.s_num_dim_buckets);
+
+        const glm::vec2 bucket_start(collision_detector.m_min_x, collision_detector.m_min_y);
+        for (size_t idx = 0; idx < collision_detector.s_num_dim_buckets * collision_detector.s_num_dim_buckets; ++idx) {
+          glm::vec2 bucket_start_cur = bucket_start + bucket_len * glm::vec2(idx % collision_detector.s_num_dim_buckets, idx / collision_detector.s_num_dim_buckets);
+          glm::vec2 bucket_end = bucket_start_cur + bucket_len;
+          size_t bucket_collisions = 0;
+          v.draw_rectangle(
+              bucket_start_cur + glm::vec2{1.0f, 1.0f},
+              bucket_len,
+              {0, 255, 255, 255}
+          );
+        }
+        v.draw_rectangle(
+            bucket_start,
+            glm::vec2{collision_detector.m_max_x, collision_detector.m_max_y} - bucket_start,
+            {200, 0, 200, 255}
+        );
+#endif // drawing bucket collider
+
         for (const auto& item : frame_objects) {
             size_t section_idx = 0;
             for (; section_idx < section_predictions.size(); ++section_idx) {

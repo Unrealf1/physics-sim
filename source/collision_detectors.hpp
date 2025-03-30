@@ -73,6 +73,7 @@ namespace Physics {
         glm::vec2 m_simulation_rectangle;
         using bucket_t = std::vector<size_t>;
         std::vector<bucket_t> m_buckets;
+        inline static constexpr uint64_t s_num_dim_buckets = num_dim_buckets;
 
 
         BucketCollisionDetector(glm::vec2 simulation_rectangle) : m_simulation_rectangle(simulation_rectangle) {
@@ -105,41 +106,39 @@ namespace Physics {
                 bucket.clear();
             }
 
-            float bucket_len = std::max(m_max_x - m_min_x, m_max_y - m_min_y) / float(num_dim_buckets);
+            float bucket_len_x = (m_max_x - m_min_x) / float(num_dim_buckets);
+            float bucket_len_y = (m_max_y - m_min_y) / float(num_dim_buckets);
+            const glm::vec2 bucket_len{bucket_len_x, bucket_len_y};
             
             for (size_t i = 0; i < objects.size(); ++i) {
-                auto& obj = objects[i];
-                glm::vec2 bucket_start(m_min_x, m_min_y);
-                size_t till_line_break = num_dim_buckets;
-                for (size_t idx = 0; idx < num_dim_buckets * num_dim_buckets; ++idx) {
-                    // TODO: for now assume, that bucket is not smaller than circle. may be bad.
-                    glm::vec2 points_to_check[] = {
-                        obj.m_collider.m_position, 
-                        obj.m_collider.m_position + glm::vec2(0.0f, obj.m_collider.m_radius),
-                        obj.m_collider.m_position + glm::vec2(0.0f, -obj.m_collider.m_radius),
-                        obj.m_collider.m_position + glm::vec2(obj.m_collider.m_radius, 0.0f),
-                        obj.m_collider.m_position + glm::vec2(-obj.m_collider.m_radius, 0.0f)
-                    };
-                    auto check_bucket_collision = [&](const glm::vec2 point) -> bool {
-                        // && is faster than &
-                        return (point.x <= bucket_start.x + bucket_len)
-                                && (point.x >= bucket_start.x)
-                                && (point.y <= bucket_start.y + bucket_len)
-                                && (point.y >= bucket_start.y);
-                    };
-                    bool bucket_collision = std::any_of(std::begin(points_to_check), std::end(points_to_check), check_bucket_collision);
-                    if (bucket_collision) {
-                        m_buckets[idx].push_back(i);
+                const auto& obj = objects[i];
+                const glm::vec2 buckets_offset(m_min_x, m_min_y);
+                glm::vec2 points_to_check[] = {
+                    obj.m_collider.m_position,
+                    obj.m_collider.m_position + glm::vec2(0.0f, obj.m_collider.m_radius),
+                    obj.m_collider.m_position + glm::vec2(0.0f, -obj.m_collider.m_radius),
+                    obj.m_collider.m_position + glm::vec2(obj.m_collider.m_radius, 0.0f),
+                    obj.m_collider.m_position + glm::vec2(-obj.m_collider.m_radius, 0.0f)
+                };
+                for (const auto& point : points_to_check) {
+                    glm::vec2 point_bucket_coords = (point - buckets_offset);
+                    int bucket_x = std::floor(point_bucket_coords.x / bucket_len.x);
+                    int bucket_y = std::floor(point_bucket_coords.y / bucket_len.y);
+                    int bucket_idx = bucket_x + bucket_y * num_dim_buckets;
+                    if (bucket_x < 0 || bucket_x >= num_dim_buckets) {
+                      continue;
                     }
-                    
-                    --till_line_break;
-                    if (till_line_break == 0) {
-                        till_line_break = num_dim_buckets;
-                        bucket_start.x = m_min_x;
-                        bucket_start.y += bucket_len;
-                    } else {
-                        bucket_start.x += bucket_len;
+                    if (bucket_y < 0 || bucket_y >= num_dim_buckets) {
+                      continue;
                     }
+                    if (bucket_idx < 0 || bucket_idx >= m_buckets.size()) {
+                      continue;
+                    }
+                    auto& bucket = m_buckets[bucket_idx];
+                    if (!bucket.empty() && bucket.back() == i) {
+                        continue;
+                    }
+                    bucket.push_back(i);
                 }
             }
         }
