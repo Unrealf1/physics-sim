@@ -108,6 +108,11 @@ namespace Physics {
 
             float bucket_len_x = (m_max_x - m_min_x) / float(num_dim_buckets);
             float bucket_len_y = (m_max_y - m_min_y) / float(num_dim_buckets);
+            if (!objects.empty()) {
+              auto min_bucket_dim = objects.front().m_collider.m_radius * 2.0f * 1.5f; // 1.5 times diameter
+              bucket_len_x = std::max(bucket_len_x, min_bucket_dim);
+              bucket_len_y = std::max(bucket_len_y, min_bucket_dim);
+            }
             const glm::vec2 bucket_len{bucket_len_x, bucket_len_y};
             
             for (size_t i = 0; i < objects.size(); ++i) {

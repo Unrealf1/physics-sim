@@ -104,7 +104,7 @@ namespace Physics {
                         auto changed_v = (2 * m2 * other_2 + other_1 * dm) / sm;
 
                         copy.m_phys_item.speed = proj_1 + changed_v;
-                        copy.m_phys_item.speed *= 0.99f;
+                        copy.m_phys_item.speed *= 0.99f; // reduce energy on collision
                         if (copy.m_phys_item.speed != copy.m_phys_item.speed) {
                             spdlog::warn("m1: {}, m2: {}, proj_len_1: {}, proj_len_2: {}, dp: {}, {}", m1, m2, proj_len_1, proj_len_2, dp.x, dp.y);
                         }
@@ -125,6 +125,7 @@ namespace Physics {
                         auto change_direction = glm::normalize(collision_point - copy.m_collider.m_position);
                         auto proj_changed_len = glm::dot(change_direction, copy.m_phys_item.speed);
                         auto proj_changed = change_direction * proj_changed_len;
+                        proj_changed *= 0.99f; // reducing energy on each collision
                         copy.m_phys_item.speed -= proj_changed * 2.0f;
                     }
 

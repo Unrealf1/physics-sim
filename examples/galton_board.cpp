@@ -37,8 +37,12 @@ std::filesystem::path get_prediction_path(size_t section_idx) {
     return get_prediction_dir()  / (std::to_string(section_idx) + ".txt");
 }
 
-int main(int, char *[]) {
-    std::this_thread::sleep_for(500ms);
+int main(int argc, const char** argv) {
+    const char* fps_report_file_name = nullptr;
+    if (argc > 1) {
+      fps_report_file_name = argv[1];
+      spdlog::info("Will record fps to \"{}\"", fps_report_file_name);
+    }
     WindowParams p {};
     p.w = 1000;
     p.h = 900;
@@ -47,26 +51,25 @@ int main(int, char *[]) {
 
     Window w(p);
     
-    uint32_t sim_width = 1000;
-    uint32_t sim_height = 900;
+    uint32_t sim_width = 200; // centimeters
+    uint32_t sim_height = 200;
 
     Physics::Simulation<Physics::ForwardEuler, Physics::BucketCollisionDetector<50>> sim({sim_width, sim_height});
-    //Physics::Simulation<Physics::ForwardEuler, Physics::OnlyStaticCollisionDetector> sim({sim_width, sim_height});
     sim.add_force(Physics::earth_gravitation());
-    sim.add_force(Physics::damping(0.17f));
+    //sim.add_force(Physics::damping(0.005f));
 
-    float top_offset = 300.0f;
-    float bottom_offset = 200.0f;
-    float sides_offset = 50.0f;
+    float top_offset = 60.0f;
+    float bottom_offset = 40.0f;
+    float sides_offset = 10.0f;
 
     float field_width = float(sim_width) - 2.0f * sides_offset;
     float field_height = float(sim_height) - top_offset - bottom_offset;
 
-    uint32_t num_sections = 10;
+    uint32_t num_sections = 20;
     float section_len = field_width / float(num_sections);
-    uint32_t num_layers = uint32_t(std::ceil(field_height / section_len));
+    uint32_t num_layers = uint32_t(std::floor(field_height / section_len));
     uint32_t num_knobs = num_sections;
-    float knob_radius = 10.0f;
+    float knob_radius = 2.5f;
 
     std::vector<std::unordered_set<Physics::item_id_t>> section_predictions(num_sections + 2);
     for (uint32_t section = 0; section < section_predictions.size(); ++section) {
@@ -91,7 +94,8 @@ int main(int, char *[]) {
         float dx = section_len / 20.0f;
         sim.add_static_collider(std::make_unique<Physics::StaticSegmentCollider>(glm::vec2{x - dx, y_bot}, glm::vec2{x - dx, y_top}));
         sim.add_static_collider(std::make_unique<Physics::StaticSegmentCollider>(glm::vec2{x + dx, y_bot}, glm::vec2{x + dx, y_top}));
-        sim.add_static_collider(std::make_unique<Physics::StaticSegmentCollider>(glm::vec2{x - dx, y_top}, glm::vec2{x + dx, y_top}));
+        sim.add_static_collider(std::make_unique<Physics::StaticSegmentCollider>(glm::vec2{x - dx, y_top}, glm::vec2{x, y_top - 2.0f}));
+        sim.add_static_collider(std::make_unique<Physics::StaticSegmentCollider>(glm::vec2{x, y_top - 2.0f}, glm::vec2{x + dx, y_top}));
     }
 
     // Add immovable circles
@@ -109,12 +113,13 @@ int main(int, char *[]) {
     }
 
     // Add falling items
-    float circle_radius = knob_radius / 5.0f;
+    float circle_radius = 0.6f;
     glm::vec2 box_start = { float(sim_width) / 2.0f - section_len / 2.0f, circle_radius }; // left top
     glm::vec2 box_end = { box_start.x + section_len, top_offset - 2 * knob_radius - circle_radius }; // right bot
     float circle_area = circle_radius * 2.0f * 1.1f;
     float circles_w = std::floor((box_end.x - box_start.x) / (circle_area));
     float circles_h = std::floor((box_end.y - box_start.y) / (circle_area));
+    const float circle_mass = circle_radius * circle_radius * std::numbers::pi_v<float> * 0.5f / 10000.0f * 100.0f;
     uint64_t num_circles = 0;
     for (float j = 0.0f; j < circles_h; j += 1.0f) {
         for (float i = - circles_h + j; i < circles_w + circles_h - j; i += 1.0f) {
@@ -123,7 +128,7 @@ int main(int, char *[]) {
                 {box_start + glm::vec2{ i * circle_area, j * circle_area }},
                 {},
                 circle_radius,
-                1.0f
+                circle_mass
             );
             sim.add_circle(item);
         }
@@ -141,12 +146,12 @@ int main(int, char *[]) {
     Visualizer v(w);
     v.set_simulation_rectangle(sim.get_simulation_rectangle());
     std::jthread phys_thread(make_physics_thread(&sim, {
-        .physics_step = 1.0f / 120.0f,
-        .fps_limit = 0.0f,
+        .physics_step = 0.01f,
+        .fps_limit = 200.0f,
         .start_delay = 200ms,
         .measure_period = 50,
-        .frames_to_run = 10'000,
-        .perfomance_report_filename = "fps.tsv"
+        .frames_to_run = 5'000,
+        .perfomance_report_filename = fps_report_file_name
     }));
 
     bool quit = false;
